@@ -1,0 +1,607 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import ChapterStory from '../components/ChapterStory.astro';
+import LeadershipMessage from '../components/LeadershipMessage.astro';
+import SpecializedChapters from '../components/SpecializedChapters.astro';
+import ExecutiveCommittee from '../components/ExecutiveCommittee.astro';
+import AssociateCommittee from '../components/AssociateCommittee.astro';
+import RecentActivities from '../components/RecentActivities.astro';
+import Newsletter from '../components/Newsletter.astro';
+import Footer from '../components/Footer.astro';
+import { getLeadershipMessages } from '../lib/content';
+
+const leadership = await getLeadershipMessages();
+const chiefPatron = leadership.chief_patron;
+const counselor = leadership.counselor;
+---
+
+<Layout>
+    <Header />
+
+    <main>
+        <Hero />
+
+        <ChapterStory
+            accent="#00629b"
+            paragraphs={[
+                'IEEE MIST Student Branch is the premier technical organization at the Military Institute of Science and Technology, advancing technology for the benefit of humanity.',
+                'We are a hub for innovation, leadership, and technical excellence, bringing together five specialized chapters and affinity groups to foster a global community of engineers through workshops, seminars, and hands-on projects.',
+            ]}
+            ctaHref="/about#story"
+            ctaLabel="Discover Our Story"
+        />
+
+        <!-- Chief Patron -->
+        <LeadershipMessage
+            id="chief-patron-message"
+            eyebrow={chiefPatron.eyebrow}
+            heading={chiefPatron.heading}
+            message={chiefPatron.message}
+            personName={chiefPatron.personName}
+            personRoles={chiefPatron.personRoles}
+            image={chiefPatron.image}
+            imageAlt={chiefPatron.imageAlt}
+        />
+
+        <!-- Counselor -->
+        <LeadershipMessage
+            id="counselor-message"
+            eyebrow={counselor.eyebrow}
+            heading={counselor.heading}
+            message={counselor.message}
+            personName={counselor.personName}
+            personRoles={counselor.personRoles}
+            image={counselor.image}
+            imageAlt={counselor.imageAlt}
+            reverse
+        />
+
+        <SpecializedChapters />
+        <ExecutiveCommittee />
+        <AssociateCommittee />
+        <RecentActivities />
+        <Newsletter />
+    </main>
+
+    <Footer />
+</Layout>
+
+<script>
+    import { supabase } from '../lib/supabase-browser';
+
+    const baseUrl = import.meta.env.BASE_URL || '/';
+
+    function assetUrl(value: string | null | undefined) {
+        if (!value) return '';
+        if (/^(https?:)?\/\//.test(value)) return value;
+        const clean = value.replace(/^\/+/, '');
+        const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        return `${base}${clean}`;
+    }
+
+    function escapeText(value: unknown) {
+        return value == null ? '' : String(value);
+    }
+
+    /*
+     * LEADERSHIP
+     * Updates Chief Patron and Counselor immediately when their rows change.
+     */
+    function updateLeadershipSection(
+        sectionId: string,
+        row: {
+            id: string;
+            eyebrow?: string;
+            heading?: string;
+            message?: string[];
+            person_name?: string;
+            person_roles?: string[];
+            image_url?: string | null;
+        }
+    ) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        const eyebrow = section.querySelector('.eyebrow');
+        if (eyebrow && row.eyebrow) eyebrow.textContent = row.eyebrow;
+
+        const heading = section.querySelector('h2');
+        if (heading && row.heading) heading.textContent = row.heading;
+
+        const name = section.querySelector('.name');
+        if (name && row.person_name) name.textContent = row.person_name;
+
+        const attribution = section.querySelector('.attribution > div');
+        if (attribution && Array.isArray(row.person_roles)) {
+            attribution.querySelectorAll('.role').forEach((element) => element.remove());
+
+            row.person_roles.forEach((role) => {
+                const p = document.createElement('p');
+                p.className = 'role';
+                p.textContent = role;
+                attribution.appendChild(p);
+            });
+        }
+
+        const image = section.querySelector('.photo-frame img') as HTMLImageElement | null;
+        if (image && row.image_url) {
+            image.src = assetUrl(row.image_url);
+            image.alt = row.person_name || '';
+        }
+
+        const messageCard = section.querySelector('.message-card');
+        if (messageCard && Array.isArray(row.message)) {
+            messageCard.querySelectorAll('.paragraph').forEach((element) => element.remove());
+
+            row.message.forEach((paragraph) => {
+                const p = document.createElement('p');
+                p.className = 'paragraph';
+                p.textContent = paragraph;
+                messageCard.appendChild(p);
+            });
+        }
+
+        console.log(`Updated ${row.id} leadership section`);
+    }
+
+    /*
+     * EXECUTIVE COMMITTEE
+     * Refetching the table keeps INSERT, UPDATE and DELETE handling simple.
+     */
+    async function refreshExecutiveCommittee() {
+        const grid = document.getElementById('executive-committee-live');
+        if (!grid) return;
+
+        const { data, error } = await supabase
+            .from('executive_committee')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            console.error('Executive committee refresh failed:', error);
+            return;
+        }
+
+        grid.innerHTML = '';
+
+        (data ?? []).forEach((member) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+
+            const img = document.createElement('img');
+            img.src = assetUrl(member.avatar_url) || assetUrl('images/home/icon-person.svg');
+            img.alt = member.name || '';
+            if (!member.avatar_url) img.className = 'icon';
+            avatar.appendChild(img);
+
+            const name = document.createElement('p');
+            name.className = 'name';
+            name.textContent = escapeText(member.name);
+
+            const role = document.createElement('p');
+            role.className = 'role';
+            role.textContent = escapeText(member.role);
+
+            card.append(avatar, name, role);
+            grid.appendChild(card);
+        });
+
+        console.log('Updated executive committee');
+    }
+
+    /*
+     * ASSOCIATE DIRECTORS
+     */
+    async function refreshAssociateDirectors() {
+        const grid = document.getElementById('associate-directors-live');
+        if (!grid) return;
+
+        const { data, error } = await supabase
+            .from('associate_directors')
+            .select('*')
+            .eq('group_key', 'sb')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            console.error('Associate directors refresh failed:', error);
+            return;
+        }
+
+        grid.innerHTML = '';
+
+        (data ?? []).forEach((member) => {
+            const card = document.createElement('div');
+            card.className = member.avatar_url ? 'card photo-card' : 'card';
+
+            if (member.avatar_url) {
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+
+                const img = document.createElement('img');
+                img.src = assetUrl(member.avatar_url);
+                img.alt = member.name || '';
+                avatar.appendChild(img);
+                card.appendChild(avatar);
+            } else {
+                const icon = document.createElement('div');
+                icon.className = 'icon';
+
+                const img = document.createElement('img');
+                img.src = assetUrl('images/home/icon-person.svg');
+                img.alt = '';
+                icon.appendChild(img);
+                card.appendChild(icon);
+            }
+
+            const info = document.createElement('div');
+
+            const name = document.createElement('p');
+            name.className = 'name';
+            name.textContent = escapeText(member.name);
+
+            const role = document.createElement('p');
+            role.className = 'role';
+            role.textContent = escapeText(member.role);
+
+            info.append(name, role);
+            card.appendChild(info);
+            grid.appendChild(card);
+        });
+
+        console.log('Updated associate directors');
+    }
+
+    /*
+     * RECENT ACTIVITIES
+     * The event list is backed by the Supabase `events` table.
+     */
+    function formatEventDate(value: unknown) {
+        const date = new Date(String(value ?? ''));
+        if (Number.isNaN(date.getTime())) {
+            return { month: '', day: '' };
+        }
+
+        return {
+            month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
+            day: new Intl.DateTimeFormat('en-US', { day: '2-digit' }).format(date),
+        };
+    }
+
+    async function refreshRecentEvents() {
+        const list = document.getElementById('recent-events-live');
+        if (!list) return;
+
+        const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .eq('published', true)
+            .order('event_date', { ascending: false });
+
+        if (error) {
+            console.error('Recent events refresh failed:', error);
+            return;
+        }
+
+        const events = (data ?? [])
+            .filter((event) => event.event_date && event.slug && event.title);
+
+        /* Keep the Markdown events that are already rendered by Astro. */
+        const markdownCards = Array.from(
+            list.querySelectorAll<HTMLAnchorElement>('.event-card[data-static-event="true"]')
+        );
+
+        const supabaseCards = events.map((event) => {
+            const { month, day } = formatEventDate(event.event_date);
+
+            const link = document.createElement('a');
+            link.className = 'event-card';
+            link.dataset.supabaseEvent = 'true';
+            link.dataset.eventSlug = event.slug;
+            link.dataset.eventDate = event.event_date;
+            link.href = assetUrl(`/events/${event.slug}`);
+
+            const badge = document.createElement('div');
+            badge.className = 'date-badge';
+
+            const monthEl = document.createElement('span');
+            monthEl.className = 'month';
+            monthEl.textContent = month;
+
+            const dayEl = document.createElement('span');
+            dayEl.className = 'day';
+            dayEl.textContent = day;
+
+            badge.append(monthEl, dayEl);
+
+            const info = document.createElement('div');
+
+            const title = document.createElement('p');
+            title.className = 'title';
+            title.textContent = escapeText(event.title);
+
+            const description = document.createElement('p');
+            description.className = 'desc';
+            description.textContent = escapeText(event.description);
+
+            info.append(title, description);
+            link.append(badge, info);
+            return link;
+        });
+
+        /*
+         * Recreate the same "three most recent events" rule used by
+         * RecentActivities.astro, while preserving Markdown events.
+         */
+        const combined = [...markdownCards, ...supabaseCards]
+            .sort((a, b) => {
+                const aDate = new Date(a.dataset.eventDate || '').getTime();
+                const bDate = new Date(b.dataset.eventDate || '').getTime();
+                return bDate - aDate;
+            })
+            .slice(0, 3);
+
+        list.querySelectorAll('.event-card').forEach((element) => element.remove());
+
+        const browseButton = list.querySelector('.browse-btn');
+        combined.forEach((card) => {
+            if (browseButton) {
+                list.insertBefore(card, browseButton);
+            } else {
+                list.appendChild(card);
+            }
+        });
+
+        console.log('Updated recent activities');
+    }
+
+    /*
+     * Initial client-side refresh.
+     * This also makes the browser copy independent from Astro's build-time cache.
+     */
+    refreshExecutiveCommittee();
+    refreshAssociateDirectors();
+    refreshRecentEvents();
+
+    /*
+     * ONE Realtime channel for all dashboard-managed homepage content.
+     */
+    const liveChannel = supabase
+        .channel('homepage-live-updates')
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'leadership_messages',
+            },
+            (payload) => {
+                console.log('Leadership realtime event:', payload);
+
+                if (payload.eventType === 'DELETE') return;
+
+                const row = payload.new as {
+                    id: string;
+                    eyebrow?: string;
+                    heading?: string;
+                    message?: string[];
+                    person_name?: string;
+                    person_roles?: string[];
+                    image_url?: string | null;
+                };
+
+                if (row.id === 'chief_patron') {
+                    updateLeadershipSection('chief-patron-message', row);
+                }
+
+                if (row.id === 'counselor') {
+                    updateLeadershipSection('counselor-message', row);
+                }
+            }
+        )
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'executive_committee',
+            },
+            (payload) => {
+                console.log('Executive committee realtime event:', payload);
+                refreshExecutiveCommittee();
+            }
+        )
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'associate_directors',
+            },
+            (payload) => {
+                console.log('Associate directors realtime event:', payload);
+                refreshAssociateDirectors();
+            }
+        )
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'events',
+            },
+            (payload) => {
+                console.log('Events realtime event:', payload);
+                refreshRecentEvents();
+            }
+        )
+        .subscribe((status) => {
+            console.log('Homepage Realtime status:', status);
+        });
+</script>
+
+<style is:global>
+    /* Realtime-rendered Executive Committee cards */
+    #executive-committee-live .card {
+        width: 187px;
+        background: #fff;
+        border: 1px solid var(--color-border);
+        padding: 17px 17px 41px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    #executive-committee-live .avatar {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        background: var(--color-bg-alt-2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #executive-committee-live .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #executive-committee-live .avatar img.icon {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+        opacity: 0.35;
+    }
+
+    #executive-committee-live .name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--color-navy);
+        margin-bottom: 4px;
+    }
+
+    #executive-committee-live .role {
+        font-size: 16px;
+        color: var(--color-text-muted);
+        text-transform: capitalize;
+    }
+
+    /* Realtime-rendered Associate Director cards */
+    #associate-directors-live .card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid var(--color-border);
+        border-radius: 2px;
+        padding: 9px;
+    }
+
+    #associate-directors-live .card.photo-card {
+        background: #fff;
+        border-color: rgba(230, 231, 231, 0.4);
+        padding: 17px;
+    }
+
+    #associate-directors-live .icon {
+        flex-shrink: 0;
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: var(--color-bg-alt-2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #associate-directors-live .icon img {
+        width: 16px;
+        height: 16px;
+    }
+
+    #associate-directors-live .avatar {
+        flex-shrink: 0;
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    #associate-directors-live .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #associate-directors-live .name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--color-navy);
+    }
+
+    #associate-directors-live .role {
+        font-size: 16px;
+        color: var(--color-text-muted);
+    }
+
+    #associate-directors-live .photo-card .name,
+    #associate-directors-live .photo-card .role {
+        font-size: 14px;
+    }
+
+    /* Realtime-rendered Recent Activities cards */
+    #recent-events-live .event-card[data-live-event] {
+        display: flex;
+        gap: 20px;
+        padding: 21px;
+        background: #fff;
+        border: 1px solid rgba(230, 231, 231, 0.4);
+        border-radius: 16px;
+        text-decoration: none;
+    }
+
+    #recent-events-live .event-card[data-live-event] .date-badge {
+        flex-shrink: 0;
+        width: 64px;
+        height: 64px;
+        border-radius: 8px;
+        background: rgba(0, 98, 155, 0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #recent-events-live .event-card[data-live-event] .month {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--color-blue);
+    }
+
+    #recent-events-live .event-card[data-live-event] .day {
+        font-size: 24px;
+        font-weight: 900;
+        color: var(--color-blue);
+    }
+
+    #recent-events-live .event-card[data-live-event] .title {
+        font-size: 16px;
+        color: var(--color-text);
+    }
+
+    #recent-events-live .event-card[data-live-event] .desc {
+        font-size: 14px;
+        color: var(--color-text-secondary);
+        padding-top: 4px;
+    }
+</style>

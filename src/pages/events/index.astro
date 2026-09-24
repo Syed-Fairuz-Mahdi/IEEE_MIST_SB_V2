@@ -1,0 +1,1065 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import HeroCircuitPattern from '../../components/HeroCircuitPattern.astro';
+import { chapterCta } from '../../data/chapterCopy';
+import { chapters } from '../../data/chapters';
+import { selectRows } from '../../lib/supabase';
+import { formatLongDate, isPast } from '../../utils/date';
+import { withBase } from '../../utils/paths';
+
+export const prerender = false;
+
+interface EventRow {
+	slug: string;
+	title: string;
+	event_date: string;
+	chapter: string;
+	description: string;
+	body: string | null;
+	image_url: string | null;
+	location: string | null;
+	event_time: string | null;
+	registration_link: string | null;
+	registration_open: boolean | null;
+	featured: boolean | null;
+	tags: string[] | null;
+	published: boolean | null;
+}
+
+interface LiveEvent {
+	id: string;
+	source: 'supabase';
+	data: {
+		title: string;
+		date: Date;
+		chapter: 'SB' | 'EDS' | 'APS' | 'WIE' | 'MTT-S' | 'SPS';
+		description: string;
+		image?: string;
+		location?: string;
+		time?: string;
+		registrationLink?: string;
+		registrationOpen?: boolean;
+		featured?: boolean;
+		tags: string[];
+	};
+	body?: string;
+}
+
+const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS'] as const;
+
+function fromRow(row: EventRow): LiveEvent | null {
+	const date = new Date(row.event_date);
+	const chapter = CHAPTERS.find((code) => code === row.chapter);
+
+	if (
+		!row.slug ||
+		!row.title ||
+		!row.description ||
+		!chapter ||
+		Number.isNaN(date.getTime())
+	) {
+		return null;
+	}
+
+	return {
+		id: row.slug,
+		source: 'supabase',
+		body: row.body ?? undefined,
+		data: {
+			title: row.title,
+			date,
+			chapter,
+			description: row.description,
+			image: row.image_url ?? undefined,
+			location: row.location ?? undefined,
+			time: row.event_time ?? undefined,
+			registrationLink: row.registration_link ?? undefined,
+			registrationOpen: row.registration_open ?? true,
+			featured: row.featured ?? false,
+			tags: row.tags ?? [],
+		},
+	};
+}
+
+let rows: EventRow[] = [];
+
+try {
+	rows = await selectRows<EventRow>(
+		'events',
+		{
+			select: '*',
+			published: 'eq.true',
+			order: 'event_date.desc',
+		},
+		8_000,
+	);
+} catch (error) {
+	console.warn('[events] Could not load published Supabase events:', error);
+}
+
+const all = rows.flatMap((row) => {
+	const event = fromRow(row);
+	return event ? [event] : [];
+}).sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const upcoming = all
+	.filter((e) => !isPast(e.data.date))
+	.sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
+
+const featured = all.find((e) => e.data.featured) ?? upcoming[0] ?? all[0];
+const secondary = all.find((e) => e.id !== featured?.id);
+const feed = all.filter((e) => e.id !== featured?.id && e.id !== secondary?.id);
+
+const INITIAL = 6;
+
+const filters = [
+	{ code: 'all', label: 'All' },
+	{ code: 'SB', label: 'Student Branch' },
+	...chapters.map((c) => ({ code: c.shortName, label: c.code })),
+];
+
+function eyebrow(date: Date, location?: string) {
+	const d = formatLongDate(date).toUpperCase();
+	return location ? `${d} • ${location.toUpperCase()}` : d;
+}
+
+const initialEvents = all.map((event) => ({
+	id: event.id,
+	title: event.data.title,
+	date: event.data.date.toISOString(),
+	chapter: event.data.chapter,
+	description: event.data.description,
+	image: event.data.image ?? null,
+	location: event.data.location ?? null,
+	time: event.data.time ?? null,
+	registrationLink: event.data.registrationLink ?? null,
+	registrationOpen: event.data.registrationOpen ?? true,
+	featured: event.data.featured ?? false,
+	tags: event.data.tags ?? [],
+}));
+---
+
+<Layout
+	title="Events | IEEE MIST Student Branch"
+	description="Activities and insights from the IEEE MIST Student Branch — workshops, seminars, symposiums and competitions."
+>
+	<Header />
+	<main>
+		<section class="hero">
+			<HeroCircuitPattern />
+			<div class="container hero-inner">
+				<h1>Activities &amp; Insights</h1>
+				<p>
+					Workshops, seminars, symposiums and competitions from the IEEE MIST Student Branch and its
+					five technical chapters.
+				</p>
+			</div>
+		</section>
+		<section class="filter-bar">
+			<div class="container filter-inner">
+				<div class="chips" role="group" aria-label="Filter by chapter">
+					{
+						filters.map((f, i) => (
+							<button type="button" class:list={['chip', { active: i === 0 }]} data-filter={f.code}>
+								{f.label}
+							</button>
+						))
+					}
+				</div>
+				<div class="search">
+					<img src={withBase('images/home/icon-search.svg')} alt="" />
+					<input type="search" placeholder="Search events..." aria-label="Search events" data-search />
+				</div>
+			</div>
+		</section>
+		<section class="spotlight" data-spotlight>
+			<div class="container spotlight-grid" data-spotlight-grid>
+				{
+					featured && (
+						<a class="large-card" data-featured-card href={withBase(`/events/${featured.id}`)}>
+							<div class="large-media">
+								{featured.data.image ? (
+									<img src={withBase(featured.data.image)} alt="" data-featured-image />
+								) : (
+									<div class="ph" data-featured-placeholder />
+								)}
+							</div>
+							<div class="large-body">
+								<span class="eyebrow" data-featured-eyebrow>{eyebrow(featured.data.date, featured.data.location)}</span>
+								<h2 data-featured-title>{featured.data.title}</h2>
+								<p data-featured-description>{featured.data.description}</p>
+								<span class="more">Read more →</span>
+							</div>
+						</a>
+					)
+				}
+				{
+					secondary && (
+						<a class="secondary-card" data-secondary-card href={withBase(`/events/${secondary.id}`)}>
+							<span class="tag">Chapter News</span>
+							<h3 data-secondary-title>{secondary.data.title}</h3>
+							<p data-secondary-description>{secondary.data.description}</p>
+							<span class="eyebrow dark" data-secondary-eyebrow>
+								{eyebrow(secondary.data.date, secondary.data.location)}
+							</span>
+						</a>
+					)
+				}
+			</div>
+		</section>
+		<section class="feed">
+			<div class="container">
+				<div class="feed-grid" data-feed>
+					{
+						feed.map((event, i) => (
+							<article
+								class="card"
+								data-event-id={event.id}
+								data-chapter={event.data.chapter}
+								data-title={event.data.title.toLowerCase()}
+								data-index={i}
+								hidden={i >= INITIAL}
+							>
+								<a class="card-media" href={withBase(`/events/${event.id}`)}>
+									{event.data.image ? (
+										<img src={withBase(event.data.image)} alt="" loading="lazy" />
+									) : (
+										<div class="ph" />
+									)}
+									<span class="card-chapter">{event.data.chapter}</span>
+								</a>
+								<div class="card-body">
+									<span class="eyebrow dark">{eyebrow(event.data.date, event.data.location)}</span>
+									<h3>
+										<a href={withBase(`/events/${event.id}`)}>{event.data.title}</a>
+									</h3>
+									<p>{event.data.description}</p>
+								</div>
+							</article>
+						))
+					}
+					<article class="callout">
+						<img src={withBase('images/chapters/mtt-s/cta-pattern.png')} alt="" class="callout-pattern" />
+						<div class="callout-content">
+							<h3>{chapterCta.heading}</h3>
+							<p>{chapterCta.body}</p>
+							<a class="btn" href={chapterCta.href} target="_blank" rel="noopener noreferrer">{chapterCta.button}</a>
+						</div>
+					</article>
+				</div>
+
+				<p class="no-match" data-no-match hidden>No events match your filter.</p>
+				<div class="load-more-wrap">
+					<button type="button" class="load-more" data-load-more hidden={feed.length <= INITIAL}>
+						Load more
+					</button>
+				</div>
+			</div>
+		</section>
+	</main>
+	<Footer />
+</Layout>
+
+<script type="application/json" id="initial-events-data" set:html={JSON.stringify(initialEvents).replace(/</g, '\\u003c')} />
+
+<script>
+	import { supabase } from '../../lib/supabase-browser';
+
+	interface LiveEvent {
+		id: string;
+		title: string;
+		date: string;
+		chapter: string;
+		description: string;
+		image: string | null;
+		location: string | null;
+		time: string | null;
+		registrationLink: string | null;
+		registrationOpen: boolean;
+		featured: boolean;
+		tags: string[];
+	}
+
+	interface SupabaseEventRow {
+		slug: string;
+		title: string;
+		event_date: string;
+		chapter: string;
+		description: string;
+		body: string | null;
+		image_url: string | null;
+		location: string | null;
+		event_time: string | null;
+		registration_link: string | null;
+		registration_open: boolean | null;
+		featured: boolean | null;
+		tags: string[] | null;
+		published: boolean | null;
+	}
+
+	const INITIAL = 6;
+	const STEP = 6;
+
+	const spotlight = document.querySelector<HTMLElement>('[data-spotlight]');
+	const spotlightGrid = document.querySelector<HTMLElement>('[data-spotlight-grid]');
+	const feedGrid = document.querySelector<HTMLElement>('[data-feed]');
+	const chips = [...document.querySelectorAll<HTMLButtonElement>('.chip')];
+	const search = document.querySelector<HTMLInputElement>('[data-search]');
+	const loadMore = document.querySelector<HTMLButtonElement>('[data-load-more]');
+	const noMatch = document.querySelector<HTMLElement>('[data-no-match]');
+	const initialData = document.querySelector<HTMLScriptElement>('#initial-events-data');
+
+	let filter = 'all';
+	let query = '';
+	let shown = INITIAL;
+	let events = new Map<string, LiveEvent>();
+
+	function escapeHtml(value: unknown): string {
+		return String(value ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#039;');
+	}
+
+	function url(value: string): string {
+		return `/events/${encodeURIComponent(value)}`;
+	}
+
+	function imageUrl(value: string | null): string {
+		if (!value) return '';
+		if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value;
+		return `/${value.replace(/^\/+/, '')}`;
+	}
+
+	function formatDate(value: string): string {
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return value;
+
+		return new Intl.DateTimeFormat('en-US', {
+			month: 'long',
+			day: 'numeric',
+			year: 'numeric',
+			timeZone: 'UTC',
+		}).format(date).toUpperCase();
+	}
+
+	function eyebrowLive(date: string, location: string | null): string {
+		const value = formatDate(date);
+		return location ? `${value} • ${location.toUpperCase()}` : value;
+	}
+
+	function sortedEvents(): LiveEvent[] {
+		return [...events.values()].sort(
+			(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+		);
+	}
+
+	function upcoming(list: LiveEvent[]): LiveEvent[] {
+		return list
+			.filter((event) => new Date(event.date).getTime() >= Date.now())
+			.sort(
+				(a, b) =>
+					new Date(a.date).getTime() - new Date(b.date).getTime(),
+			);
+	}
+
+	function featuredEvent(list: LiveEvent[]): LiveEvent | undefined {
+		return (
+			list.find((event) => event.featured) ??
+			upcoming(list)[0] ??
+			list[0]
+		);
+	}
+
+	function secondaryEvent(
+		list: LiveEvent[],
+		featured: LiveEvent | undefined,
+	): LiveEvent | undefined {
+		return list.find((event) => event.id !== featured?.id);
+	}
+
+	function feedEvents(
+		list: LiveEvent[],
+		featured: LiveEvent | undefined,
+		secondary: LiveEvent | undefined,
+	): LiveEvent[] {
+		return list.filter(
+			(event) =>
+				event.id !== featured?.id &&
+				event.id !== secondary?.id,
+		);
+	}
+
+	function normalize(row: SupabaseEventRow): LiveEvent | null {
+		if (
+			!row.slug ||
+			!row.title ||
+			!row.description ||
+			!row.chapter ||
+			!row.event_date ||
+			row.published === false
+		) {
+			return null;
+		}
+
+		return {
+			id: row.slug,
+			title: row.title,
+			date: row.event_date,
+			chapter: row.chapter,
+			description: row.description,
+			image: row.image_url,
+			location: row.location,
+			time: row.event_time,
+			registrationLink: row.registration_link,
+			registrationOpen: row.registration_open ?? true,
+			featured: row.featured ?? false,
+			tags: Array.isArray(row.tags) ? row.tags : [],
+		};
+	}
+
+	function renderFeatured(event: LiveEvent | undefined, secondary: LiveEvent | undefined) {
+		if (!spotlight || !spotlightGrid) return;
+
+		if (!event && !secondary) {
+			spotlight.hidden = true;
+			spotlightGrid.innerHTML = '';
+			return;
+		}
+
+		spotlight.hidden = false;
+
+		const image = event?.image
+			? `<img src="${escapeHtml(imageUrl(event.image))}" alt="" />`
+			: '<div class="ph"></div>';
+
+		spotlightGrid.innerHTML = `
+			${
+				event
+					? `
+						<a class="large-card" href="${escapeHtml(url(event.id))}">
+							<div class="large-media">${image}</div>
+							<div class="large-body">
+								<span class="eyebrow">${escapeHtml(eyebrowLive(event.date, event.location))}</span>
+								<h2>${escapeHtml(event.title)}</h2>
+								<p>${escapeHtml(event.description)}</p>
+								<span class="more">Read more →</span>
+							</div>
+						</a>
+					`
+					: ''
+			}
+			${
+				secondary
+					? `
+						<a class="secondary-card" href="${escapeHtml(url(secondary.id))}">
+							<span class="tag">Chapter News</span>
+							<h3>${escapeHtml(secondary.title)}</h3>
+							<p>${escapeHtml(secondary.description)}</p>
+							<span class="eyebrow dark">${escapeHtml(eyebrowLive(secondary.date, secondary.location))}</span>
+						</a>
+					`
+					: ''
+			}
+		`;
+	}
+
+	function renderFeed(list: LiveEvent[]) {
+		if (!feedGrid) return;
+
+		const callout = feedGrid.querySelector<HTMLElement>('.callout');
+
+		feedGrid.querySelectorAll('.card').forEach((card) => card.remove());
+
+		list.forEach((event, index) => {
+			const card = document.createElement('article');
+			card.className = 'card';
+			card.dataset.eventId = event.id;
+			card.dataset.chapter = event.chapter;
+			card.dataset.title = event.title.toLowerCase();
+			card.dataset.index = String(index);
+			card.hidden = index >= shown;
+
+			const media = event.image
+				? `<img src="${escapeHtml(imageUrl(event.image))}" alt="" loading="lazy" />`
+				: '<div class="ph"></div>';
+
+			card.innerHTML = `
+				<a class="card-media" href="${escapeHtml(url(event.id))}">
+					${media}
+					<span class="card-chapter">${escapeHtml(event.chapter)}</span>
+				</a>
+				<div class="card-body">
+					<span class="eyebrow dark">${escapeHtml(eyebrowLive(event.date, event.location))}</span>
+					<h3>
+						<a href="${escapeHtml(url(event.id))}">${escapeHtml(event.title)}</a>
+					</h3>
+					<p>${escapeHtml(event.description)}</p>
+				</div>
+			`;
+
+			if (callout) {
+				feedGrid.insertBefore(card, callout);
+			} else {
+				feedGrid.appendChild(card);
+			}
+		});
+	}
+
+	function matches(event: LiveEvent): boolean {
+		const chapterOk = filter === 'all' || event.chapter === filter;
+		const text = `${event.title} ${event.description} ${event.chapter}`.toLowerCase();
+		const queryOk = !query || text.includes(query);
+		return chapterOk && queryOk;
+	}
+
+	function renderFilters() {
+		const filtered = sortedEvents().filter(matches);
+		const cards = [...document.querySelectorAll<HTMLElement>('[data-feed] .card')];
+
+		let visible = 0;
+
+		cards.forEach((card) => {
+			const event = events.get(card.dataset.eventId ?? '');
+
+			if (!event || !matches(event)) {
+				card.hidden = true;
+				return;
+			}
+
+			visible += 1;
+			card.hidden = visible > shown;
+		});
+
+		if (loadMore) loadMore.hidden = shown >= filtered.length;
+		if (noMatch) noMatch.hidden = filtered.length > 0;
+	}
+
+	function render() {
+		const list = sortedEvents();
+		const featured = featuredEvent(list);
+		const secondary = secondaryEvent(list, featured);
+		const feed = feedEvents(list, featured, secondary);
+
+		renderFeatured(featured, secondary);
+		renderFeed(feed);
+		renderFilters();
+	}
+
+	function setEvent(event: LiveEvent) {
+		events.set(event.id, event);
+	}
+
+	function removeEvent(slug: string) {
+		events.delete(slug);
+	}
+
+	function loadInitial() {
+		if (!initialData?.textContent) return;
+
+		try {
+			const value = JSON.parse(initialData.textContent) as LiveEvent[];
+
+			if (Array.isArray(value)) {
+				value.forEach(setEvent);
+			}
+		} catch (error) {
+			console.error('Could not parse initial events:', error);
+		}
+	}
+
+	async function syncFromSupabase() {
+		const { data, error } = await supabase
+			.from('events')
+			.select('*')
+			.eq('published', true)
+			.order('event_date', { ascending: false });
+
+		if (error) {
+			console.error('Could not synchronize events:', error);
+			return;
+		}
+
+		const remote = new Map<string, LiveEvent>();
+
+		for (const row of (data ?? []) as SupabaseEventRow[]) {
+			const event = normalize(row);
+			if (event) remote.set(event.id, event);
+		}
+
+		/*
+		 * Replace the complete Supabase snapshot. This is important because it
+		 * also removes rows that are no longer published.
+		 */
+		events = remote;
+		render();
+	}
+
+	loadInitial();
+	render();
+
+	chips.forEach((chip) => {
+		chip.addEventListener('click', () => {
+			filter = chip.dataset.filter ?? 'all';
+			shown = INITIAL;
+
+			chips.forEach((item) =>
+				item.classList.toggle('active', item === chip),
+			);
+
+			renderFilters();
+		});
+	});
+
+	search?.addEventListener('input', () => {
+		query = search.value.trim().toLowerCase();
+		shown = INITIAL;
+		renderFilters();
+	});
+
+	loadMore?.addEventListener('click', () => {
+		shown += STEP;
+		renderFilters();
+	});
+
+	void syncFromSupabase();
+
+	const channel = supabase
+		.channel('events-index-live')
+		.on(
+			'postgres_changes',
+			{
+				event: '*',
+				schema: 'public',
+				table: 'events',
+			},
+			(payload) => {
+				const row = (payload.new || payload.old) as Partial<SupabaseEventRow>;
+
+				if (!row?.slug) return;
+
+				if (payload.eventType === 'INSERT') {
+					const event = normalize(payload.new as SupabaseEventRow);
+
+					if (event) {
+						setEvent(event);
+						render();
+					}
+				}
+
+				if (payload.eventType === 'UPDATE') {
+					const event = normalize(payload.new as SupabaseEventRow);
+
+					if (event) {
+						setEvent(event);
+					} else {
+						removeEvent(row.slug);
+					}
+
+					render();
+				}
+
+				if (payload.eventType === 'DELETE') {
+					removeEvent(row.slug);
+					render();
+				}
+			},
+		)
+		.subscribe((status) => {
+			console.log(`Events index Realtime status: ${status}`);
+		});
+
+	window.addEventListener('beforeunload', () => {
+		supabase.removeChannel(channel);
+	});
+</script>
+
+
+<style is:global>
+	.hero {
+		position: relative;
+		background: linear-gradient(135deg, var(--color-navy) 0%, #013a72 55%, var(--color-blue) 160%);
+		padding: 72px 0;
+		overflow: hidden;
+	}
+
+	.hero-inner {
+		position: relative;
+	}
+
+	.hero h1 {
+		font-size: 44px;
+		font-weight: 700;
+		letter-spacing: -0.88px;
+		color: #fff;
+		margin-bottom: 16px;
+	}
+	.hero p {
+		max-width: 660px;
+		font-size: 18px;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.8);
+	}
+
+	.filter-bar {
+		background: #f4f4f4;
+		border-bottom: 1px solid var(--color-border);
+		padding: 18px 0;
+	}
+
+	.filter-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+		flex-wrap: wrap;
+	}
+
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.chip {
+		padding: 8px 18px;
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		background: #fff;
+		font-size: 14px;
+		color: var(--color-text-secondary);
+	}
+
+	.chip:hover {
+		border-color: var(--color-blue);
+		color: var(--color-blue);
+	}
+
+	.chip.active {
+		background: var(--color-navy);
+		border-color: var(--color-navy);
+		color: #fff;
+		font-weight: 600;
+	}
+	.search {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 9px 16px;
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		background: #fff;
+	}
+
+	.search img {
+		width: 14px;
+		height: 14px;
+		opacity: 0.5;
+	}
+
+	.search input {
+		width: 200px;
+		border: none;
+		outline: none;
+		font-size: 14px;
+		font-family: var(--font-sans);
+		color: var(--color-text);
+	}
+	.eyebrow {
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.75);
+	}
+
+	.eyebrow.dark {
+		color: var(--color-text-muted);
+	}
+
+	.spotlight {
+		padding: 56px 0 0;
+	}
+
+	.spotlight-grid {
+		display: grid;
+		grid-template-columns: 1.5fr 1fr;
+		gap: 28px;
+		align-items: stretch;
+	}
+	.large-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		min-height: 426px;
+		border-radius: 4px;
+		overflow: hidden;
+		background: var(--color-navy);
+	}
+
+	.large-media {
+		position: absolute;
+		inset: 0;
+	}
+
+	.large-media img,
+	.ph {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.ph {
+		background: linear-gradient(135deg, var(--color-navy), var(--color-blue));
+	}
+	.large-card::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(0deg, rgba(0, 40, 85, 0.92) 10%, rgba(0, 40, 85, 0.15) 75%);
+	}
+
+	.large-body {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 36px;
+	}
+
+	.large-body h2 {
+		font-size: 30px;
+		font-weight: 700;
+		line-height: 1.2;
+		color: #fff;
+	}
+
+	.large-body p {
+		max-width: 560px;
+		font-size: 15px;
+		line-height: 1.65;
+		color: rgba(255, 255, 255, 0.85);
+	}
+	.large-body .more {
+		font-size: 14px;
+		font-weight: 600;
+		color: #fff;
+	}
+
+	.secondary-card {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 32px;
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		background: #f4f4f4;
+	}
+
+	.secondary-card:hover {
+		border-color: var(--color-blue);
+	}
+	.tag {
+		align-self: flex-start;
+		padding: 5px 12px;
+		border-radius: 999px;
+		background: rgba(0, 98, 155, 0.1);
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--color-blue);
+	}
+
+	.secondary-card h3 {
+		font-size: 22px;
+		font-weight: 700;
+		line-height: 1.3;
+		color: var(--color-navy);
+	}
+
+	.secondary-card p {
+		flex: 1;
+		font-size: 15px;
+		line-height: 1.65;
+		color: var(--color-text-secondary);
+	}
+
+	.feed {
+		padding: 56px 0 96px;
+	}
+	.feed-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 28px;
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		overflow: hidden;
+		background: #fff;
+		transition: box-shadow 0.2s ease;
+	}
+
+	.card:hover {
+		box-shadow: 0 18px 40px -26px rgba(0, 40, 85, 0.5);
+	}
+
+	.card-media {
+		position: relative;
+		display: block;
+		aspect-ratio: 16 / 9;
+		background: #f4f4f4;
+	}
+	.card-media img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.card-chapter {
+		position: absolute;
+		top: 12px;
+		left: 12px;
+		padding: 4px 11px;
+		border-radius: 999px;
+		background: rgba(0, 40, 85, 0.85);
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 1px;
+		color: #fff;
+	}
+
+	.card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 22px;
+		flex: 1;
+	}
+	.card-body h3 {
+		font-size: 18px;
+		font-weight: 700;
+		line-height: 1.3;
+		color: var(--color-navy);
+	}
+
+	.card-body p {
+		font-size: 14px;
+		line-height: 1.65;
+		color: var(--color-text-secondary);
+	}
+
+	.callout {
+		position: relative;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		justify-content: center;
+		padding: 32px;
+		border-radius: 4px;
+		background: var(--color-purple);
+	}
+	.callout-pattern {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		opacity: 0.1;
+		transition: opacity 0.3s ease;
+	}
+
+	.callout:hover .callout-pattern {
+		opacity: 0.2;
+	}
+
+	.callout-content {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+
+	.callout h3 {
+		font-size: 22px;
+		font-weight: 700;
+		color: #fff;
+	}
+
+	.callout p {
+		font-size: 14px;
+		line-height: 1.65;
+		color: rgba(255, 255, 255, 0.75);
+	}
+	.btn {
+		align-self: flex-start;
+		padding: 13px 26px;
+		border-radius: 4px;
+		background: #fff;
+		color: var(--color-purple);
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.no-match {
+		margin-top: 32px;
+		padding: 48px;
+		text-align: center;
+		border: 1px dashed var(--color-border);
+		border-radius: 4px;
+		color: var(--color-text-muted);
+	}
+
+	.load-more-wrap {
+		display: flex;
+		justify-content: center;
+		margin-top: 48px;
+	}
+	.load-more {
+		padding: 14px 40px;
+		border: 1px solid var(--color-blue);
+		border-radius: 4px;
+		background: transparent;
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--color-blue);
+	}
+
+	.load-more:hover {
+		background: var(--color-blue);
+		color: #fff;
+	}
+
+	@media (max-width: 1024px) {
+		.feed-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+		.spotlight-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+	@media (max-width: 640px) {
+		.feed-grid {
+			grid-template-columns: 1fr;
+		}
+		.hero h1 {
+			font-size: 32px;
+		}
+		.search input {
+			width: 100%;
+		}
+		.search {
+			width: 100%;
+		}
+	}
+</style>

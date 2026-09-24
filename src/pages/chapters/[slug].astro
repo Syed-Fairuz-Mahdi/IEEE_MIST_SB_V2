@@ -1,0 +1,229 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import ChapterHero from '../../components/ChapterHero.astro';
+import ChapterAbout from '../../components/ChapterAbout.astro';
+import ChapterStory from '../../components/ChapterStory.astro';
+import ChapterExecutiveCommittee from '../../components/ChapterExecutiveCommittee.astro';
+import ChapterAssociateCommittee from '../../components/ChapterAssociateCommittee.astro';
+import ChapterCTA from '../../components/ChapterCTA.astro';
+import SectionHeading from '../../components/SectionHeading.astro';
+import EventCard from '../../components/EventCard.astro';
+import { getAllEvents } from '../../lib/events';
+import { chapters } from '../../data/chapters';
+import { chapterPanels, associatesForChapter } from '../../data/committee';
+import { chapterCopy } from '../../data/chapterCopy';
+import {
+    chapterExecAvatars,
+    chapterAssociateAvatars,
+    chapterAccent2,
+} from '../../data/chapterAvatars';
+import { withBase } from '../../utils/paths';
+
+export const prerender = false;
+
+/*
+ * Get the chapter directly from the URL.
+ *
+ * Example:
+ * /chapters/eds
+ * Astro.params.slug === "eds"
+ */
+const slug = Astro.params.slug;
+
+const chapter = chapters.find(
+    (item) => item.slug === slug
+);
+
+if (!chapter) {
+    return new Response('Chapter not found', {
+        status: 404,
+    });
+}
+
+const copy = chapterCopy[chapter.slug];
+
+if (!copy) {
+    return new Response(
+        `No chapter content found for "${chapter.slug}"`,
+        {
+            status: 404,
+        }
+    );
+}
+
+const accent2 =
+    chapterAccent2[chapter.slug] ?? chapter.accent;
+
+const allEvents = await getAllEvents();
+
+const chapterEvents = allEvents
+    .filter(
+        (event) =>
+            event.data.chapter === chapter.shortName
+    )
+    .sort(
+        (a, b) =>
+            b.data.date.getTime() -
+            a.data.date.getTime()
+    )
+    .slice(0, 3);
+
+const execAvatars =
+    chapterExecAvatars[chapter.slug] ?? {};
+
+const panel = (
+    chapterPanels[chapter.slug] ?? []
+).map((member) => ({
+    ...member,
+    avatar:
+        member.avatar ??
+        execAvatars[member.name],
+}));
+
+const associateAvatars =
+    chapterAssociateAvatars[chapter.slug] ?? {};
+
+const associates = associatesForChapter(
+    chapter.slug
+).map((member) => ({
+    ...member,
+    avatar:
+        member.avatar ??
+        associateAvatars[member.name],
+}));
+---
+
+<Layout
+    title={`${chapter.code} — ${chapter.fullName} | IEEE MIST`}
+    description={copy.heroSubtitle}
+>
+    <Header />
+
+    <main>
+        <ChapterHero
+            slug={chapter.slug}
+            code={chapter.code}
+            fullName={chapter.fullName}
+            title={copy.heroTitle}
+            headline={copy.heroHeadline}
+            badge={copy.heroBadge}
+            subtitle={copy.heroSubtitle}
+            accent={chapter.accent}
+            accent2={accent2}
+            logo={chapter.logoWhite}
+            variant={
+                chapter.slug === 'mtt-s'
+                    ? 'light'
+                    : 'dark'
+            }
+        />
+
+        <ChapterStory
+            paragraphs={copy.story}
+            accent={chapter.accent}
+            attribution={copy.storyAttribution}
+            align="left"
+        />
+
+        <ChapterAbout
+            slug={chapter.slug}
+            code={chapter.code}
+            about={copy.about}
+            mission={copy.mission}
+            missionItems={copy.missionItems}
+            missionHeading={copy.missionHeading}
+            vision={copy.vision}
+            stats={copy.stats}
+            accent={chapter.accent}
+            accent2={accent2}
+        />
+
+        <ChapterExecutiveCommittee
+            code={chapter.code}
+            members={panel}
+            accent={chapter.accent}
+        />
+
+        {
+            associates.length > 0 && (
+                <ChapterAssociateCommittee
+                    members={associates}
+                    accent={chapter.accent}
+                />
+            )
+        }
+
+        <section class="events" id="events">
+            <div class="container">
+                <SectionHeading
+                    title={`${chapter.code} Events`}
+                    description="Recent and upcoming activities from this chapter."
+                />
+
+                {
+                    chapterEvents.length > 0 ? (
+                        <div class="event-grid">
+                            {chapterEvents.map((event) => (
+                                <EventCard
+                                    title={event.data.title}
+                                    date={event.data.date}
+                                    chapter={event.data.chapter}
+                                    description={event.data.description}
+                                    image={event.data.image}
+                                    location={event.data.location}
+                                    href={withBase(
+                                        `/events/${event.id}`
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <p class="empty">
+                            No events have been published
+                            for this chapter yet.
+                        </p>
+                    )
+                }
+            </div>
+        </section>
+
+        <ChapterCTA slug={chapter.slug} />
+    </main>
+
+    <Footer />
+</Layout>
+
+<style>
+    .events {
+        background: #fff;
+        padding: 32px 0;
+    }
+
+    .event-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+    }
+
+    .empty {
+        padding: 48px;
+        text-align: center;
+        border: 1px dashed var(--color-border);
+        border-radius: 16px;
+        color: var(--color-text-muted);
+    }
+
+    @media (max-width: 1024px) {
+        .event-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .event-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

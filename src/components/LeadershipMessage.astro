@@ -1,0 +1,201 @@
+---
+interface Props {
+        id?: string;
+
+	eyebrow: string;
+	heading: string;
+	/** Full message, one paragraph per entry. */
+	message: string[];
+	personName: string;
+	/** Signature lines shown under the name, in order (e.g. department, then position). */
+	personRoles: string[];
+	image: string;
+	imageAlt: string;
+	reverse?: boolean;
+}
+
+const {
+    id,
+    eyebrow,
+    heading,
+    message,
+    personName,
+    personRoles,
+    image,
+    imageAlt,
+    reverse = false
+} = Astro.props;
+---
+
+<section id={id} class="leadership" class:list={{ reverse }}>
+	<div class="container">
+		<div class="section-head">
+			<p class="eyebrow">{eyebrow}</p>
+			<h2>{heading}</h2>
+		</div>
+		<div class="grid">
+			<div class="photo-col">
+				<div class="photo-frame">
+					<img src={image} alt={imageAlt} />
+				</div>
+				<div class="attribution">
+					<span class="divider"></span>
+					<div>
+						<p class="name">{personName}</p>
+						{personRoles.map((role) => <p class="role">{role}</p>)}
+					</div>
+				</div>
+			</div>
+			<div class="text-col">
+				<div class="message-card">
+					<span class="quote-mark" aria-hidden="true">&ldquo;</span>
+					{message.map((paragraph) => <p class="paragraph">{paragraph}</p>)}
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.leadership {
+		background: var(--color-bg-alt);
+		padding: 96px 0;
+	}
+
+	.section-head {
+		margin-bottom: 40px;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: 5fr 7fr;
+		gap: 64px;
+		align-items: start;
+	}
+
+	.leadership.reverse .grid {
+		grid-template-columns: 7fr 5fr;
+	}
+
+	.leadership.reverse .photo-col {
+		order: 2;
+	}
+
+	.leadership.reverse .text-col {
+		order: 1;
+	}
+
+	.photo-col {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.photo-frame {
+		border: 8px solid #fff;
+		border-radius: 16px;
+		overflow: hidden;
+		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+	}
+
+	.photo-frame img {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		object-fit: cover;
+	}
+
+	.eyebrow {
+		font-size: 12px;
+		letter-spacing: 3.6px;
+		text-transform: uppercase;
+		color: var(--color-blue);
+		margin-bottom: 12px;
+	}
+
+	h2 {
+		font-size: 48px;
+		color: var(--color-navy);
+		font-weight: 400;
+	}
+
+	.message-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		background: #fff;
+		border: 1px solid rgba(0, 98, 155, 0.05);
+		border-radius: 16px;
+		padding: 41px;
+		box-shadow:
+			0 20px 25px -5px rgba(0, 0, 0, 0.1),
+			0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	}
+
+	.quote-mark {
+		position: absolute;
+		top: -28px;
+		left: -8px;
+		font-size: 80px;
+		font-weight: 700;
+		color: rgba(0, 98, 155, 0.25);
+		line-height: 1;
+	}
+
+	.paragraph {
+		font-size: 17px;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+	}
+
+	.attribution {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+		text-align: center;
+	}
+
+	.divider {
+		width: 48px;
+		height: 2px;
+		background: rgba(0, 98, 155, 0.3);
+		flex-shrink: 0;
+	}
+
+	.name {
+		font-size: 16px;
+		color: var(--color-navy);
+	}
+
+	.role {
+		font-size: 12px;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--color-blue);
+	}
+
+	.role + .role {
+		margin-top: 2px;
+	}
+
+	@media (max-width: 800px) {
+		.grid,
+		.leadership.reverse .grid {
+			grid-template-columns: 1fr;
+		}
+		.leadership.reverse .photo-col,
+		.leadership.reverse .text-col {
+			order: initial;
+		}
+		h2 {
+			font-size: 32px;
+		}
+		.paragraph {
+			font-size: 16px;
+		}
+		.message-card {
+			padding: 28px;
+		}
+	}
+</style>

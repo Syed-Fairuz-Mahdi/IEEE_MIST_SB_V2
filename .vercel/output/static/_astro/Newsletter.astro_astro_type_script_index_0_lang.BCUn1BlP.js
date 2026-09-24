@@ -1,0 +1,1 @@
+import{r as e,t}from"./forms.D1RWQzUw.js";document.querySelectorAll(`form[data-newsletter-form]`).forEach(n=>t(n,e));

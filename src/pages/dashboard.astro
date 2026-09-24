@@ -1,0 +1,5989 @@
+---
+import { withBase } from '../utils/paths';
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <meta name="robots" content="noindex, nofollow" />
+
+   <title>Content Dashboard | IEEE MIST Student Branch</title>
+
+   <link rel="icon" href={withBase('favicon.ico')} />
+
+   <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+   />
+
+   <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+   />
+
+   <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+   />
+</head>
+
+<body>
+
+   <div id="app">
+      <div class="boot">
+         <div class="boot-spinner"></div>
+         <p>Loading dashboard...</p>
+      </div>
+   </div>
+
+
+   <script>
+      import { createClient } from '@supabase/supabase-js';
+
+      const SUPABASE_URL = 'https://czxhvlqhfqhovuslglpe.supabase.co';
+      const SUPABASE_KEY = 'sb_publishable__C3FKDsT53MA-0siZYUbKw_Q26ZkV_H';
+      const BUCKET = 'site-content';
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+      const app = document.getElementById('app')!;
+
+      const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS'];
+
+
+      // ============================================================
+      // HELPERS
+      // ============================================================
+
+      function el<K extends keyof HTMLElementTagNameMap>(
+         tag: K,
+         attrs: Record<string, string> = {},
+         children: (Node | string)[] = [],
+      ): HTMLElementTagNameMap[K] {
+
+         const node = document.createElement(tag);
+
+         for (const [k, v] of Object.entries(attrs)) {
+            if (k === 'class') {
+               node.className = v;
+            } else {
+               node.setAttribute(k, v);
+            }
+         }
+
+         for (const child of children) {
+            node.append(child);
+         }
+
+         return node;
+      }
+
+
+      function toast(
+         message: string,
+         kind: 'ok' | 'err' = 'ok'
+      ) {
+
+         const bar = document.getElementById('toast');
+
+         if (!bar) return;
+
+         bar.textContent = message;
+
+         bar.className = `toast show ${kind}`;
+
+         window.clearTimeout((bar as any)._t);
+
+         (bar as any)._t = window.setTimeout(() => {
+            bar.classList.remove('show');
+         }, 3500);
+      }
+
+
+      function publicImageUrl(path: string): string {
+
+         return supabase.storage
+            .from(BUCKET)
+            .getPublicUrl(path)
+            .data.publicUrl;
+      }
+
+
+      async function uploadImage(
+         file: File,
+         folder: string
+      ): Promise<string> {
+
+         const ext =
+            file.name.split('.').pop() || 'jpg';
+
+         const path =
+            `${folder}/${crypto.randomUUID()}.${ext}`;
+
+         const { error } =
+            await supabase.storage
+               .from(BUCKET)
+               .upload(
+                  path,
+                  file,
+                  {
+                     cacheControl: '3600',
+                     upsert: false
+                  }
+               );
+
+         if (error) {
+            throw error;
+         }
+
+         return publicImageUrl(path);
+      }
+
+
+      function imagePicker(
+         currentUrl: string | null,
+         folder: string,
+         onChange: (url: string) => void
+      ) {
+
+         const wrap = el('div', {
+            class: 'imgpick'
+         });
+
+         const preview = el('img', {
+            class: 'imgpick-preview',
+            src: currentUrl || withBaseNoop('images/placeholder.png'),
+            alt: 'Image preview'
+         });
+
+         preview.onerror = () => {
+            preview.style.visibility = 'hidden';
+         };
+
+
+         const input = el(
+            'input',
+            {
+               type: 'file',
+               accept: 'image/*',
+               class: 'imgpick-input'
+            }
+         ) as HTMLInputElement;
+
+
+         const uploadInfo = el(
+            'div',
+            {
+               class: 'imgpick-info'
+            }
+         );
+
+
+         const uploadTitle = el(
+            'strong',
+            {
+               class: 'imgpick-title'
+            },
+            ['Upload image']
+         );
+
+
+         const uploadText = el(
+            'span',
+            {
+               class: 'imgpick-help'
+            },
+            ['JPG, PNG or WebP']
+         );
+
+
+         const status = el(
+            'span',
+            {
+               class: 'imgpick-status'
+            },
+            ['']
+         );
+
+
+         uploadInfo.append(
+            uploadTitle,
+            uploadText,
+            input,
+            status
+         );
+
+
+         input.addEventListener(
+            'change',
+            async () => {
+
+               const file = input.files?.[0];
+
+               if (!file) return;
+
+               if (file.size > 5 * 1024 * 1024) {
+
+                  status.textContent =
+                     'Image must be smaller than 5 MB.';
+
+                  status.className =
+                     'imgpick-status error-text';
+
+                  return;
+               }
+
+
+               status.textContent =
+                  'Uploading...';
+
+               status.className =
+                  'imgpick-status';
+
+
+               try {
+
+                  const url =
+                     await uploadImage(
+                        file,
+                        folder
+                     );
+
+                  preview.src = url;
+
+                  preview.style.visibility =
+                     'visible';
+
+                  status.textContent =
+                     'Image uploaded successfully.';
+
+                  status.className =
+                     'imgpick-status success-text';
+
+                  onChange(url);
+
+               } catch (err: any) {
+
+                  status.textContent =
+                     `Upload failed: ${err.message || err}`;
+
+                  status.className =
+                     'imgpick-status error-text';
+               }
+            }
+         );
+
+
+         wrap.append(
+            preview,
+            uploadInfo
+         );
+
+         return wrap;
+      }
+
+
+      function withBaseNoop(p: string) {
+         return p;
+      }
+
+
+      // ============================================================
+      // LOGIN
+      // ============================================================
+
+      function renderLogin() {
+
+         app.replaceChildren();
+
+
+         const page = el(
+            'div',
+            {
+               class: 'login-page'
+            }
+         );
+
+
+         const card = el(
+            'form',
+            {
+               class: 'login-card'
+            }
+         );
+
+
+         const logo = el(
+            'div',
+            {
+               class: 'login-logo'
+            }
+         );
+
+
+         logo.innerHTML = `
+            <div class="login-logo-ieee">IEEE</div>
+            <div class="login-logo-text">
+               MIST Student Branch
+            </div>
+         `;
+
+
+         const heading = el(
+            'h1',
+            {},
+            ['Content Dashboard']
+         );
+
+
+         const description = el(
+            'p',
+            {
+               class: 'login-description'
+            },
+            [
+               'Sign in with your administrator account to manage website content.'
+            ]
+         );
+
+
+         const email = el(
+            'input',
+            {
+               type: 'email',
+               placeholder: 'Email address',
+               required: 'true',
+               class: 'field'
+            }
+         ) as HTMLInputElement;
+
+
+         const password = el(
+            'input',
+            {
+               type: 'password',
+               placeholder: 'Password',
+               required: 'true',
+               class: 'field'
+            }
+         ) as HTMLInputElement;
+
+
+         const error = el(
+            'p',
+            {
+               class: 'error'
+            },
+            ['']
+         );
+
+
+         const submit = el(
+            'button',
+            {
+               type: 'submit',
+               class: 'btn primary login-button'
+            },
+            ['Sign in']
+         );
+
+
+         card.append(
+            logo,
+            heading,
+            description,
+            labeled('Email', email),
+            labeled('Password', password),
+            error,
+            submit
+         );
+
+
+         card.addEventListener(
+            'submit',
+            async (e) => {
+
+               e.preventDefault();
+
+               submit.setAttribute(
+                  'disabled',
+                  'true'
+               );
+
+               submit.textContent =
+                  'Signing in...';
+
+               error.textContent = '';
+
+
+               const {
+                  error: signInError
+               } =
+                  await supabase.auth.signInWithPassword({
+                     email: email.value.trim(),
+                     password: password.value
+                  });
+
+
+               if (signInError) {
+
+                  error.textContent =
+                     signInError.message;
+
+                  submit.removeAttribute(
+                     'disabled'
+                  );
+
+                  submit.textContent =
+                     'Sign in';
+               }
+            }
+         );
+
+
+         const footer = el(
+            'p',
+            {
+               class: 'login-footer'
+            },
+            [
+               'IEEE MIST Student Branch • Admin Portal'
+            ]
+         );
+
+
+         page.append(
+            card,
+            footer
+         );
+
+
+         app.append(page);
+      }
+
+
+      // ============================================================
+      // DASHBOARD TABS
+      // ============================================================
+
+      const TABS = [
+         {
+            id: 'chief_patron',
+            group: 'home',
+            label: "Chief Patron's Message",
+            icon: '👤'
+         },
+         {
+            id: 'counselor',
+            group: 'home',
+            label: "Counselor's Message",
+            icon: '💬'
+         },
+         {
+            id: 'exec',
+            group: 'home',
+            label: 'Executive Committee',
+            icon: '👥'
+         },
+         {
+            id: 'assoc',
+            group: 'home',
+            label: 'Associate Directors',
+            icon: '🧩'
+         },
+         {
+            id: 'activities',
+            group: 'home',
+            label: 'Recent Activities',
+            icon: '📅'
+         },
+         {
+            id: 'settings',
+            group: 'home',
+            label: 'Publishing',
+            icon: '🚀'
+         },
+         {
+            id: 'about',
+            group: 'about',
+            label: 'About',
+            icon: '📄'
+         }
+,
+         {
+            id: 'contact',
+            group: 'contact',
+            label: 'Contact',
+            icon: '📨'
+         }
+      ];
+
+
+      async function renderShell(
+         userEmail: string
+      ) {
+
+         app.replaceChildren();
+
+
+         // ========================================================
+         // HEADER
+         // ========================================================
+
+         const header =
+            el('header', {
+               class: 'topbar'
+            });
+
+
+         const brand =
+            el('div', {
+               class: 'brand'
+            });
+
+
+         brand.innerHTML = `
+            <div class="brand-mark">
+               IEEE
+            </div>
+
+            <div class="brand-content">
+               <strong>IEEE MIST</strong>
+               <span>Student Branch</span>
+            </div>
+         `;
+
+
+         const userArea =
+            el('div', {
+               class: 'user-area'
+            });
+
+
+         const userInfo =
+            el('div', {
+               class: 'user-info'
+            });
+
+
+         userInfo.innerHTML = `
+            <span class="user-label">
+               Signed in as
+            </span>
+
+            <span class="user-email">
+               ${userEmail}
+            </span>
+         `;
+
+
+         const signOut =
+            el(
+               'button',
+               {
+                  class: 'btn ghost'
+               },
+               ['Sign out']
+            );
+
+
+         signOut.addEventListener(
+            'click',
+            () => supabase.auth.signOut()
+         );
+
+
+         userArea.append(
+            userInfo,
+            signOut
+         );
+
+
+         header.append(
+            brand,
+            userArea
+         );
+
+
+         // ========================================================
+         // DASHBOARD TITLE
+         // ========================================================
+
+         const dashboardIntro =
+            el(
+               'div',
+               {
+                  class: 'dashboard-intro'
+               }
+            );
+
+
+         dashboardIntro.innerHTML = `
+            <div>
+               <span class="eyebrow">
+                  ADMINISTRATION
+               </span>
+
+               <h1>
+                  Content Dashboard
+               </h1>
+
+               <p>
+                  Manage the content displayed across the
+                  IEEE MIST Student Branch website.
+               </p>
+            </div>
+         `;
+
+
+         // ========================================================
+         // NAVIGATION
+         // ========================================================
+
+         const sidebar =
+            el(
+               'aside',
+               {
+                  class: 'dashboard-sidebar',
+                  'aria-label': 'Dashboard navigation'
+               }
+            );
+
+         const sidebarTop = el('div', { class: 'sidebar-top' });
+         sidebarTop.innerHTML = `
+            <span class="sidebar-kicker">SITE MANAGEMENT</span>
+            <strong>Dashboard</strong>
+         `;
+         sidebar.append(sidebarTop);
+
+
+         const contentArea =
+            el('div', { class: 'dashboard-content' });
+
+
+         const panelHost =
+            el(
+               'main',
+               {
+                  class: 'panel-host'
+               }
+            );
+
+
+         const panels:
+            Record<string, HTMLElement> = {};
+
+
+         let currentTabGroup = '';
+
+         for (const tab of TABS) {
+
+            if (tab.group && tab.group !== currentTabGroup) {
+               currentTabGroup = tab.group;
+               const group = tab.group === 'about' ? 'ABOUT' : tab.group === 'contact' ? 'CONTACT' : 'HOME';
+               sidebar.append(
+                  el('div', { class: 'sidebar-group-label' }, [group])
+               );
+            }
+
+            const btn =
+               el(
+                  'button',
+                  {
+                     class: 'tab',
+                     'data-tab': tab.id,
+                     type: 'button'
+                  }
+               );
+
+
+            btn.innerHTML = `
+               <span class="tab-icon">
+                  ${tab.icon}
+               </span>
+
+               <span>
+                  ${tab.label}
+               </span>
+            `;
+
+
+            btn.addEventListener(
+               'click',
+               () => activate(tab.id)
+            );
+
+
+            sidebar.append(btn);
+
+
+            panels[tab.id] =
+               el(
+                  'section',
+                  {
+                     class: 'panel'
+                  }
+               );
+
+
+            panelHost.append(
+               panels[tab.id]
+            );
+         }
+
+
+         function activate(id: string) {
+
+            for (
+               const b of
+               sidebar.querySelectorAll('.tab')
+            ) {
+
+               b.classList.toggle(
+                  'active',
+                  (b as HTMLElement)
+                     .dataset.tab === id
+               );
+            }
+
+
+            for (
+               const [pid, p] of
+               Object.entries(panels)
+            ) {
+
+               p.classList.toggle(
+                  'active',
+                  pid === id
+               );
+            }
+         }
+
+
+         // ========================================================
+         // APPEND
+         // ========================================================
+
+         contentArea.append(
+            dashboardIntro,
+            panelHost
+         );
+
+         const dashboardLayout = el('div', { class: 'dashboard-layout' });
+         dashboardLayout.append(sidebar, contentArea);
+
+         app.append(
+            header,
+            dashboardLayout,
+            el(
+               'div',
+               {
+                  id: 'toast',
+                  class: 'toast'
+               },
+               ['']
+            )
+         );
+
+
+         // ========================================================
+         // LOAD PANELS
+         // ========================================================
+
+         await Promise.all([
+            renderLeadershipPanel(
+               panels.chief_patron,
+               'chief_patron'
+            ),
+
+            renderLeadershipPanel(
+               panels.counselor,
+               'counselor'
+            ),
+
+            renderMembersPanel(
+               panels.exec,
+               'executive_committee',
+               'exec'
+            ),
+
+            renderAssociatesPanel(
+               panels.assoc
+            ),
+
+            renderActivitiesPanel(
+               panels.activities
+            ),
+
+            renderSettingsPanel(
+               panels.settings
+            ),
+
+            renderAboutPanel(
+               panels.about
+            )
+,
+
+            renderContactPanel(
+               panels.contact
+            )
+         ]);
+
+
+         activate('chief_patron');
+      }
+
+
+      // ============================================================
+      // LEADERSHIP MESSAGE
+      // ============================================================
+
+      async function renderLeadershipPanel(
+         host: HTMLElement,
+         id: 'chief_patron' | 'counselor'
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+
+         const {
+            data,
+            error
+         } =
+            await supabase
+               .from('leadership_messages')
+               .select('*')
+               .eq('id', id)
+               .maybeSingle();
+
+
+         if (error) {
+
+            host.replaceChildren(
+               errorState(error.message)
+            );
+
+            return;
+         }
+
+
+         const row = data || {
+            id,
+            eyebrow: '',
+            heading: '',
+            person_name: '',
+            person_roles: [],
+            message: [],
+            image_url: null
+         };
+
+
+         host.replaceChildren();
+
+
+         host.append(
+            sectionHeader(
+               id === 'chief_patron'
+                  ? "Chief Patron's Message"
+                  : "Counselor's Message",
+               id === 'chief_patron'
+                  ? 'Manage the Chief Patron information displayed on the homepage.'
+                  : 'Manage the Counselor information displayed on the homepage.'
+            )
+         );
+
+
+         const form =
+            el(
+               'form',
+               {
+                  class: 'edit-form'
+               }
+            );
+
+
+         const eyebrow =
+            field(
+               'Eyebrow',
+               row.eyebrow || ''
+            );
+
+
+         const heading =
+            field(
+               'Heading',
+               row.heading || ''
+            );
+
+
+         const personName =
+            field(
+               'Name',
+               row.person_name || ''
+            );
+
+
+         const personRoles =
+            field(
+               'Roles / titles',
+               (row.person_roles || []).join('\n'),
+               true
+            );
+
+
+         const message =
+            field(
+               'Message',
+               (row.message || []).join('\n\n'),
+               true,
+               10
+            );
+
+
+         let imageUrl:
+            string | null =
+            row.image_url || null;
+
+
+         const picker =
+            imagePicker(
+               imageUrl,
+               `leadership/${id}`,
+               (url) => imageUrl = url
+            );
+
+
+         const status =
+            el(
+               'span',
+               {
+                  class: 'muted small'
+               },
+               ['']
+            );
+
+
+         const save =
+            el(
+               'button',
+               {
+                  type: 'submit',
+                  class: 'btn primary'
+               },
+               ['Save changes']
+            );
+
+
+         form.append(
+
+            labeled(
+               'Photo',
+               picker
+            ),
+
+            labeled(
+               'Eyebrow',
+               eyebrow
+            ),
+
+            labeled(
+               'Heading',
+               heading
+            ),
+
+            labeled(
+               'Name',
+               personName
+            ),
+
+            labeled(
+               'Roles / titles',
+               personRoles
+            ),
+
+            labeled(
+               'Message',
+               message
+            ),
+
+            el(
+               'div',
+               {
+                  class: 'form-footer'
+               },
+               [
+                  status,
+                  save
+               ]
+            )
+         );
+
+
+         form.addEventListener(
+            'submit',
+            async (e) => {
+
+               e.preventDefault();
+
+               save.setAttribute(
+                  'disabled',
+                  'true'
+               );
+
+               save.textContent =
+                  'Saving...';
+
+               status.textContent =
+                  'Saving changes...';
+
+
+               const paragraphs =
+                  message.value
+                     .split(/\n\s*\n/)
+                     .map(
+                        (p) =>
+                           p
+                              .replace(/\n/g, ' ')
+                              .trim()
+                     )
+                     .filter(Boolean);
+
+
+               const roles =
+                  personRoles.value
+                     .split('\n')
+                     .map(
+                        (r) => r.trim()
+                     )
+                     .filter(Boolean);
+
+
+               const {
+                  error: upsertError
+               } =
+                  await supabase
+                     .from('leadership_messages')
+                     .upsert({
+                        id,
+                        eyebrow:
+                           eyebrow.value.trim(),
+
+                        heading:
+                           heading.value.trim(),
+
+                        person_name:
+                           personName.value.trim(),
+
+                        person_roles:
+                           roles,
+
+                        message:
+                           paragraphs,
+
+                        image_url:
+                           imageUrl,
+
+                        updated_at:
+                           new Date().toISOString()
+                     });
+
+
+               save.removeAttribute(
+                  'disabled'
+               );
+
+               save.textContent =
+                  'Save changes';
+
+
+               if (upsertError) {
+
+                  status.textContent =
+                     `Error: ${upsertError.message}`;
+
+                  toast(
+                     'Could not save changes.',
+                     'err'
+                  );
+
+               } else {
+
+                  status.textContent =
+                     'Changes saved successfully.';
+
+                  toast(
+                     'Saved. Publish the changes when ready.'
+                  );
+               }
+            }
+         );
+
+
+         host.append(form);
+      }
+
+
+      // ============================================================
+      // FORM HELPERS
+      // ============================================================
+
+      function field(
+         _label: string,
+         value: string,
+         textarea = false,
+         rows = 3
+      ) {
+
+         const input =
+            textarea
+               ? (
+                  el(
+                     'textarea',
+                     {
+                        class: 'field',
+                        rows: String(rows)
+                     }
+                  ) as HTMLTextAreaElement
+               )
+               : (
+                  el(
+                     'input',
+                     {
+                        type: 'text',
+                        class: 'field'
+                     }
+                  ) as HTMLInputElement
+               );
+
+
+         input.value = value;
+
+         return input as any;
+      }
+
+
+      function labeled(
+         text: string,
+         node: Node
+      ) {
+
+         const wrap =
+            el(
+               'label',
+               {
+                  class: 'labeled'
+               }
+            );
+
+
+         wrap.append(
+            el(
+               'span',
+               {
+                  class: 'label-text'
+               },
+               [text]
+            ),
+            node
+         );
+
+
+         return wrap;
+      }
+
+
+      function sectionHeader(
+         title: string,
+         description: string
+      ) {
+
+         const wrap =
+            el(
+               'div',
+               {
+                  class: 'section-header'
+               }
+            );
+
+
+         wrap.innerHTML = `
+            <div>
+               <h2>${title}</h2>
+               <p>${description}</p>
+            </div>
+         `;
+
+
+         return wrap;
+      }
+
+
+      function loadingState() {
+
+         const wrap =
+            el(
+               'div',
+               {
+                  class: 'state-card'
+               }
+            );
+
+
+         wrap.innerHTML = `
+            <div class="loading-spinner"></div>
+            <p>Loading content...</p>
+         `;
+
+
+         return wrap;
+      }
+
+
+      function errorState(
+         message: string
+      ) {
+
+         const wrap =
+            el(
+               'div',
+               {
+                  class: 'state-card error-state'
+               }
+            );
+
+
+         wrap.innerHTML = `
+            <strong>Something went wrong</strong>
+            <p>${message}</p>
+         `;
+
+
+         return wrap;
+      }
+
+
+      // ============================================================
+      // EXECUTIVE COMMITTEE
+      // ============================================================
+
+      async function renderMembersPanel(
+         host: HTMLElement,
+         table: string,
+         folder: string
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+
+         const {
+            data,
+            error
+         } =
+            await supabase
+               .from(table)
+               .select('*')
+               .order(
+                  'sort_order',
+                  {
+                     ascending: true
+                  }
+               );
+
+
+         if (error) {
+
+            host.replaceChildren(
+               errorState(error.message)
+            );
+
+            return;
+         }
+
+
+         host.replaceChildren();
+
+
+         host.append(
+            sectionHeader(
+               'Executive Committee',
+               'Manage the members displayed in the Executive Committee section.'
+            )
+         );
+
+
+         const info =
+            el(
+               'div',
+               {
+                  class: 'info-banner'
+               }
+            );
+
+
+         info.innerHTML = `
+            <span class="info-icon">💡</span>
+            <span>
+               Use the Order field to control the position
+               of each member on the website.
+            </span>
+         `;
+
+
+         const list =
+            el(
+               'div',
+               {
+                  class: 'card-list'
+               }
+            );
+
+
+         host.append(
+            info,
+            list,
+            addMemberForm()
+         );
+
+
+         for (
+            const row of data || []
+         ) {
+
+            list.append(
+               memberCard(row)
+            );
+         }
+
+
+         function memberCard(
+            row: any
+         ) {
+
+            const card =
+               el(
+                  'div',
+                  {
+                     class: 'member-card'
+                  }
+               );
+
+
+            const cardHeader =
+               el(
+                  'div',
+                  {
+                     class: 'member-card-header'
+                  }
+               );
+
+
+            cardHeader.innerHTML = `
+               <span class="card-label">
+                  COMMITTEE MEMBER
+               </span>
+
+               <span class="member-id">
+                  #${row.sort_order ?? 0}
+               </span>
+            `;
+
+
+            const name =
+               field(
+                  '',
+                  row.name
+               );
+
+
+            const role =
+               field(
+                  '',
+                  row.role
+               );
+
+
+            const department =
+               field(
+                  '',
+                  row.department || ''
+               );
+
+
+            const major =
+               field(
+                  '',
+                  row.major || ''
+               );
+
+
+            const order =
+               el(
+                  'input',
+                  {
+                     type: 'number',
+                     class: 'field small',
+                     value: String(
+                        row.sort_order ?? 0
+                     )
+                  }
+               ) as HTMLInputElement;
+
+
+            let avatarUrl:
+               string | null =
+               row.avatar_url || null;
+
+
+            const picker =
+               imagePicker(
+                  avatarUrl,
+                  folder,
+                  (url) =>
+                     avatarUrl = url
+               );
+
+
+            const status =
+               el(
+                  'span',
+                  {
+                     class: 'muted small'
+                  },
+                  ['']
+               );
+
+
+            const save =
+               el(
+                  'button',
+                  {
+                     class: 'btn primary small',
+                     type: 'button'
+                  },
+                  ['Save']
+               );
+
+
+            const del =
+               el(
+                  'button',
+                  {
+                     class: 'btn danger small',
+                     type: 'button'
+                  },
+                  ['Delete']
+               );
+
+
+            save.addEventListener(
+               'click',
+               async () => {
+
+                  status.textContent =
+                     'Saving...';
+
+                  save.setAttribute(
+                     'disabled',
+                     'true'
+                  );
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from(table)
+                        .update({
+                           name:
+                              name.value.trim(),
+
+                           role:
+                              role.value.trim(),
+
+                           department:
+                              department.value.trim()
+                                 || null,
+
+                           major:
+                              major.value.trim()
+                                 || null,
+
+                           sort_order:
+                              Number(order.value)
+                              || 0,
+
+                           avatar_url:
+                              avatarUrl,
+
+                           updated_at:
+                              new Date().toISOString()
+                        })
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  save.removeAttribute(
+                     'disabled'
+                  );
+
+
+                  if (err) {
+
+                     status.textContent =
+                        `Error: ${err.message}`;
+
+                     toast(
+                        'Could not save member.',
+                        'err'
+                     );
+
+                  } else {
+
+                     status.textContent =
+                        'Saved successfully.';
+
+                     toast(
+                        'Saved. Publish to make it live.'
+                     );
+                  }
+               }
+            );
+
+
+            del.addEventListener(
+               'click',
+               async () => {
+
+                  if (
+                     !confirm(
+                        `Remove ${row.name}?`
+                     )
+                  ) {
+                     return;
+                  }
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from(table)
+                        .delete()
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  card.remove();
+
+                  toast(
+                     'Member removed. Publish to make it live.'
+                  );
+               }
+            );
+
+
+            card.append(
+
+               cardHeader,
+
+               picker,
+
+               labeled(
+                  'Name',
+                  name
+               ),
+
+               labeled(
+                  'Role',
+                  role
+               ),
+
+               labeled(
+                  'Department',
+                  department
+               ),
+
+               labeled(
+                  'Major',
+                  major
+               ),
+
+               labeled(
+                  'Display order',
+                  order
+               ),
+
+               el(
+                  'div',
+                  {
+                     class: 'row-actions'
+                  },
+                  [
+                     save,
+                     del,
+                     status
+                  ]
+               )
+            );
+
+
+            return card;
+         }
+
+
+         function addMemberForm() {
+
+            const form =
+               el(
+                  'form',
+                  {
+                     class: 'add-form'
+                  }
+               );
+
+
+            const heading =
+               el(
+                  'div',
+                  {
+                     class: 'add-form-heading'
+                  }
+               );
+
+
+            heading.innerHTML = `
+               <span class="add-icon">+</span>
+
+               <div>
+                  <h3>Add new member</h3>
+                  <p>
+                     Add a new Executive Committee member.
+                  </p>
+               </div>
+            `;
+
+
+            const name =
+               field('', '');
+
+
+            const role =
+               field('', '');
+
+
+            const department =
+               field('', '');
+
+
+            const major =
+               field('', '');
+
+
+            name.placeholder =
+               'Full name';
+
+
+            role.placeholder =
+               'Role (e.g. Chair)';
+
+
+            department.placeholder =
+               'Department (optional)';
+
+
+            major.placeholder =
+               'Major (optional)';
+
+
+            let avatarUrl:
+               string | null = null;
+
+
+            const picker =
+               imagePicker(
+                  null,
+                  folder,
+                  (url) =>
+                     avatarUrl = url
+               );
+
+
+            const submit =
+               el(
+                  'button',
+                  {
+                     type: 'submit',
+                     class: 'btn primary'
+                  },
+                  ['+ Add member']
+               );
+
+
+            form.append(
+
+               heading,
+
+               picker,
+
+               labeled(
+                  'Name',
+                  name
+               ),
+
+               labeled(
+                  'Role',
+                  role
+               ),
+
+               labeled(
+                  'Department',
+                  department
+               ),
+
+               labeled(
+                  'Major',
+                  major
+               ),
+
+               submit
+            );
+
+
+            form.addEventListener(
+               'submit',
+               async (e) => {
+
+                  e.preventDefault();
+
+
+                  if (
+                     !name.value.trim()
+                     ||
+                     !role.value.trim()
+                  ) {
+
+                     toast(
+                        'Name and role are required.',
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  submit.setAttribute(
+                     'disabled',
+                     'true'
+                  );
+
+
+                  const {
+                     data: inserted,
+                     error: err
+                  } =
+                     await supabase
+                        .from(table)
+                        .insert({
+                           name:
+                              name.value.trim(),
+
+                           role:
+                              role.value.trim(),
+
+                           department:
+                              department.value.trim()
+                              || null,
+
+                           major:
+                              major.value.trim()
+                              || null,
+
+                           avatar_url:
+                              avatarUrl,
+
+                           sort_order:
+                              (data?.length || 0)
+                              + list.children.length
+                        })
+                        .select()
+                        .single();
+
+
+                  submit.removeAttribute(
+                     'disabled'
+                  );
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  list.append(
+                     memberCard(inserted)
+                  );
+
+
+                  form.reset();
+
+                  avatarUrl = null;
+
+
+                  toast(
+                     'Member added. Publish to make it live.'
+                  );
+               }
+            );
+
+
+            return form;
+         }
+      }
+
+
+      // ============================================================
+      // ASSOCIATE DIRECTORS
+      // ============================================================
+
+      async function renderAssociatesPanel(
+         host: HTMLElement
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+
+         const {
+            data,
+            error
+         } =
+            await supabase
+               .from('associate_directors')
+               .select('*')
+               .eq(
+                  'group_key',
+                  'sb'
+               )
+               .order(
+                  'sort_order',
+                  {
+                     ascending: true
+                  }
+               );
+
+
+         if (error) {
+
+            host.replaceChildren(
+               errorState(error.message)
+            );
+
+            return;
+         }
+
+
+         host.replaceChildren();
+
+
+         host.append(
+            sectionHeader(
+               'Associate Directors',
+               'Manage the branch-level Associate Directors shown on the homepage.'
+            )
+         );
+
+
+         const info =
+            el(
+               'div',
+               {
+                  class: 'info-banner'
+               }
+            );
+
+
+         info.innerHTML = `
+            <span class="info-icon">ℹ</span>
+
+            <span>
+               This dashboard manages the branch-level
+               Associate Directors group.
+            </span>
+         `;
+
+
+         host.append(info);
+
+
+         await renderMembersLikeAssociates(
+            host,
+            data || []
+         );
+      }
+
+
+      async function renderMembersLikeAssociates(
+         host: HTMLElement,
+         data: any[]
+      ) {
+
+         const list =
+            el(
+               'div',
+               {
+                  class: 'card-list'
+               }
+            );
+
+
+         host.append(list);
+
+
+         for (
+            const row of data
+         ) {
+
+            list.append(
+               card(row)
+            );
+         }
+
+
+         host.append(
+            addForm()
+         );
+
+
+         function card(
+            row: any
+         ) {
+
+            const c =
+               el(
+                  'div',
+                  {
+                     class: 'member-card'
+                  }
+               );
+
+
+            const header =
+               el(
+                  'div',
+                  {
+                     class: 'member-card-header'
+                  }
+               );
+
+
+            header.innerHTML = `
+               <span class="card-label">
+                  ASSOCIATE DIRECTOR
+               </span>
+
+               <span class="member-id">
+                  #${row.sort_order ?? 0}
+               </span>
+            `;
+
+
+            const name =
+               field(
+                  '',
+                  row.name
+               );
+
+
+            const role =
+               field(
+                  '',
+                  row.role
+               );
+
+
+            const order =
+               el(
+                  'input',
+                  {
+                     type: 'number',
+                     class: 'field small',
+                     value: String(
+                        row.sort_order ?? 0
+                     )
+                  }
+               ) as HTMLInputElement;
+
+
+            let avatarUrl:
+               string | null =
+               row.avatar_url || null;
+
+
+            const picker =
+               imagePicker(
+                  avatarUrl,
+                  'associates',
+                  (url) =>
+                     avatarUrl = url
+               );
+
+
+            const status =
+               el(
+                  'span',
+                  {
+                     class: 'muted small'
+                  },
+                  ['']
+               );
+
+
+            const save =
+               el(
+                  'button',
+                  {
+                     class: 'btn primary small',
+                     type: 'button'
+                  },
+                  ['Save']
+               );
+
+
+            const del =
+               el(
+                  'button',
+                  {
+                     class: 'btn danger small',
+                     type: 'button'
+                  },
+                  ['Delete']
+               );
+
+
+            save.addEventListener(
+               'click',
+               async () => {
+
+                  status.textContent =
+                     'Saving...';
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from(
+                           'associate_directors'
+                        )
+                        .update({
+                           name:
+                              name.value.trim(),
+
+                           role:
+                              role.value.trim(),
+
+                           sort_order:
+                              Number(order.value)
+                              || 0,
+
+                           avatar_url:
+                              avatarUrl,
+
+                           updated_at:
+                              new Date().toISOString()
+                        })
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  if (err) {
+
+                     status.textContent =
+                        `Error: ${err.message}`;
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                  } else {
+
+                     status.textContent =
+                        'Saved.';
+
+                     toast(
+                        'Saved. Publish to make it live.'
+                     );
+                  }
+               }
+            );
+
+
+            del.addEventListener(
+               'click',
+               async () => {
+
+                  if (
+                     !confirm(
+                        `Remove ${row.name}?`
+                     )
+                  ) {
+                     return;
+                  }
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from(
+                           'associate_directors'
+                        )
+                        .delete()
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  c.remove();
+
+                  toast(
+                     'Associate Director removed.'
+                  );
+               }
+            );
+
+
+            c.append(
+
+               header,
+
+               picker,
+
+               labeled(
+                  'Name',
+                  name
+               ),
+
+               labeled(
+                  'Role',
+                  role
+               ),
+
+               labeled(
+                  'Display order',
+                  order
+               ),
+
+               el(
+                  'div',
+                  {
+                     class: 'row-actions'
+                  },
+                  [
+                     save,
+                     del,
+                     status
+                  ]
+               )
+            );
+
+
+            return c;
+         }
+
+
+         function addForm() {
+
+            const form =
+               el(
+                  'form',
+                  {
+                     class: 'add-form'
+                  }
+               );
+
+
+            const heading =
+               el(
+                  'div',
+                  {
+                     class: 'add-form-heading'
+                  }
+               );
+
+
+            heading.innerHTML = `
+               <span class="add-icon">+</span>
+
+               <div>
+                  <h3>
+                     Add Associate Director
+                  </h3>
+
+                  <p>
+                     Add a new branch-level associate director.
+                  </p>
+               </div>
+            `;
+
+
+            const name =
+               field('', '');
+
+
+            const role =
+               field('', '');
+
+
+            name.placeholder =
+               'Full name';
+
+
+            role.placeholder =
+               'Role (e.g. Visual & Graphics)';
+
+
+            let avatarUrl:
+               string | null = null;
+
+
+            const picker =
+               imagePicker(
+                  null,
+                  'associates',
+                  (url) =>
+                     avatarUrl = url
+               );
+
+
+            const submit =
+               el(
+                  'button',
+                  {
+                     type: 'submit',
+                     class: 'btn primary'
+                  },
+                  ['+ Add associate director']
+               );
+
+
+            form.append(
+
+               heading,
+
+               picker,
+
+               labeled(
+                  'Name',
+                  name
+               ),
+
+               labeled(
+                  'Role',
+                  role
+               ),
+
+               submit
+            );
+
+
+            form.addEventListener(
+               'submit',
+               async (e) => {
+
+                  e.preventDefault();
+
+
+                  if (
+                     !name.value.trim()
+                     ||
+                     !role.value.trim()
+                  ) {
+
+                     toast(
+                        'Name and role are required.',
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  const {
+                     data: inserted,
+                     error: err
+                  } =
+                     await supabase
+                        .from(
+                           'associate_directors'
+                        )
+                        .insert({
+                           group_key:
+                              'sb',
+
+                           group_label:
+                              'IEEE MIST Student Branch',
+
+                           name:
+                              name.value.trim(),
+
+                           role:
+                              role.value.trim(),
+
+                           avatar_url:
+                              avatarUrl,
+
+                           sort_order:
+                              list.children.length
+                        })
+                        .select()
+                        .single();
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  list.append(
+                     card(inserted)
+                  );
+
+
+                  form.reset();
+
+                  avatarUrl = null;
+
+
+                  toast(
+                     'Associate Director added.'
+                  );
+               }
+            );
+
+
+            return form;
+         }
+      }
+
+
+      // ============================================================
+      // ABOUT PAGE
+      // ============================================================
+
+      async function renderAboutPanel(host: HTMLElement) {
+         host.replaceChildren(loadingState());
+
+         const { data, error } = await supabase
+            .from('about_page')
+            .select('*')
+            .eq('id', 'main')
+            .maybeSingle();
+
+         if (error) {
+            host.replaceChildren(errorState(error.message));
+            return;
+         }
+
+         const row = data || {
+            id: 'main', hero_title: '', hero_description: '', stats: [], story: [],
+            chair_name: '', chair_role: '', chair_image_url: null, chair_message: [],
+            journey: [], mission: '', mission_source: '', vision: '', programs: [],
+            contributors: [], cta_heading: '', cta_description: '', cta_button: '', cta_link: ''
+         };
+
+         host.replaceChildren();
+         host.append(sectionHeader(
+            'About Page',
+            'Manage all editable content displayed on the public About page.'
+         ));
+
+         const form = el('form', { class: 'edit-form' });
+         const heroTitle = field('Hero title', row.hero_title || '');
+         const heroDescription = field('Hero description', row.hero_description || '', true, 4);
+         const statsField = field('Statistics', (row.stats || []).map((x: any) => `${x.value || ''} | ${x.label || ''}`).join('\n'), true, 6);
+         const story = field('Our Story paragraphs', (row.story || []).join('\n\n'), true, 12);
+
+         let chairImageUrl: string | null = row.chair_image_url || null;
+         const chairName = field("Chair's name", row.chair_name || '');
+         const chairRole = field("Chair's role", row.chair_role || '');
+         const chairMessage = field("Chair's message paragraphs", (row.chair_message || []).join('\n\n'), true, 12);
+         const chairPicker = imagePicker(chairImageUrl, 'about/chair', (url) => chairImageUrl = url);
+
+         const journeyField = field('Our Journey', (row.journey || []).map((x: any) => `${x.year || ''} | ${x.title || ''} | ${x.description || ''}`).join('\n'), true, 9);
+         const mission = field('Mission', row.mission || '', true, 5);
+         const missionSource = field('Mission source', row.mission_source || '');
+         const vision = field('Vision', row.vision || '', true, 5);
+         const programs = field('Programs', (row.programs || []).map((x: any) => `${x.title || ''} | ${x.description || ''} | ${x.href || ''} | ${x.icon || ''}`).join('\n'), true, 9);
+         const contributors = field('Contributors', (row.contributors || []).map((x: any) => `${x.name || ''} | ${x.role || ''} | ${x.avatar || ''}`).join('\n'), true, 7);
+         const ctaHeading = field('CTA heading', row.cta_heading || '');
+         const ctaDescription = field('CTA description', row.cta_description || '', true, 4);
+         const ctaButton = field('CTA button text', row.cta_button || '');
+         const ctaLink = field('CTA button link', row.cta_link || '');
+
+         const note = el('div', { class: 'info-banner' });
+         note.innerHTML = `<span class="info-icon">ℹ️</span><span><strong>Format:</strong> one item per line. Statistics: <code>value | label</code>. Journey: <code>year | title | description</code>. Programs: <code>title | description | link | icon</code>. Contributors: <code>name | role | avatar URL</code>.</span>`;
+
+         const status = el('span', { class: 'muted small' }, ['']);
+         const save = el('button', { type: 'submit', class: 'btn primary' }, ['Save About Page']);
+
+         const title = (text: string) => el('div', { class: 'form-section-title' }, [text]);
+         form.append(
+            title('Hero'), labeled('Hero title', heroTitle), labeled('Hero description', heroDescription),
+            title('Statistics'), labeled('Statistics', statsField),
+            title('Our Story'), labeled('Story', story),
+            title("Message from the Chair"), labeled('Photo', chairPicker), labeled("Chair's name", chairName), labeled("Chair's role", chairRole), labeled('Message', chairMessage),
+            title('Our Journey'), labeled('Journey', journeyField),
+            title('Mission & Vision'), labeled('Mission', mission), labeled('Mission source', missionSource), labeled('Vision', vision),
+            title('Programs'), labeled('Programs', programs),
+            title('Contributors'), labeled('Contributors', contributors),
+            title('Call to Action'), labeled('CTA heading', ctaHeading), labeled('CTA description', ctaDescription), labeled('CTA button text', ctaButton), labeled('CTA button link', ctaLink),
+            note, el('div', { class: 'form-footer' }, [status, save])
+         );
+
+         form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            save.setAttribute('disabled', 'true');
+            save.textContent = 'Saving...';
+            status.textContent = 'Saving About page...';
+
+            try {
+               const lines = (v: string) => v.split('\n').map(x => x.trim()).filter(Boolean);
+               const paragraphs = (v: string) => v.split(/\n\s*\n/).map(x => x.replace(/\n/g, ' ').trim()).filter(Boolean);
+               const parts = (line: string, count: number) => { const a = line.split('|').map(x => x.trim()); while (a.length < count) a.push(''); return a; };
+
+               const parsedStats = lines(statsField.value).map(line => { const [value, label] = parts(line, 2); return { value, label }; }).filter(x => x.value || x.label);
+               const parsedJourney = lines(journeyField.value).map(line => { const [year, title, description] = parts(line, 3); return { year, title, description }; }).filter(x => x.year || x.title || x.description);
+               const parsedPrograms = lines(programs.value).map(line => { const [title, description, href, icon] = parts(line, 4); return { title, description, href: href || undefined, icon: icon || undefined }; }).filter(x => x.title || x.description);
+               const parsedContributors = lines(contributors.value).map(line => { const [name, role, avatar] = parts(line, 3); return { name, role, avatar: avatar || undefined }; }).filter(x => x.name || x.role || x.avatar);
+
+               const { error: saveError } = await supabase.from('about_page').upsert({
+                  id: 'main', hero_title: heroTitle.value.trim(), hero_description: heroDescription.value.trim(), stats: parsedStats, story: paragraphs(story.value),
+                  chair_name: chairName.value.trim(), chair_role: chairRole.value.trim(), chair_image_url: chairImageUrl, chair_message: paragraphs(chairMessage.value),
+                  journey: parsedJourney, mission: mission.value.trim(), mission_source: missionSource.value.trim(), vision: vision.value.trim(), programs: parsedPrograms,
+                  contributors: parsedContributors, cta_heading: ctaHeading.value.trim(), cta_description: ctaDescription.value.trim(), cta_button: ctaButton.value.trim(),
+                  cta_link: ctaLink.value.trim(), updated_at: new Date().toISOString()
+               }, { onConflict: 'id' });
+
+               if (saveError) throw saveError;
+               status.textContent = 'Changes saved successfully.';
+               toast('About page saved successfully.');
+            } catch (err) {
+               const message = err instanceof Error ? err.message : String(err);
+               status.textContent = `Error: ${message}`;
+               toast('Could not save About page.', 'err');
+            } finally {
+               save.removeAttribute('disabled');
+               save.textContent = 'Save About Page';
+            }
+         });
+
+         host.append(form);
+      }
+
+
+      // ============================================================
+      // ACTIVITIES
+      // ============================================================
+
+      async function renderActivitiesPanel(
+         host: HTMLElement
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+
+         const {
+            data,
+            error
+         } =
+            await supabase
+               .from('events')
+               .select('*')
+               .order(
+                  'event_date',
+                  {
+                     ascending: false
+                  }
+               );
+
+
+         if (error) {
+
+            host.replaceChildren(
+               errorState(error.message)
+            );
+
+            return;
+         }
+
+
+         host.replaceChildren();
+
+
+         host.append(
+            sectionHeader(
+               'Recent Activities',
+               'Manage activities and events displayed on the website.'
+            )
+         );
+
+
+         const info =
+            el(
+               'div',
+               {
+                  class: 'info-banner'
+               }
+            );
+
+
+         info.innerHTML = `
+            <span class="info-icon">📅</span>
+
+            <span>
+               Only events marked
+               <strong>Published</strong>
+               will be visible to visitors.
+            </span>
+         `;
+
+
+         const list =
+            el(
+               'div',
+               {
+                  class: 'card-list'
+               }
+            );
+
+
+         host.append(
+            info,
+            list,
+            addEventForm()
+         );
+
+
+         for (
+            const row of data || []
+         ) {
+
+            list.append(
+               eventCard(row)
+            );
+         }
+
+
+         function chapterSelect(
+            value: string
+         ) {
+
+            const sel =
+               el(
+                  'select',
+                  {
+                     class: 'field'
+                  }
+               ) as HTMLSelectElement;
+
+
+            for (
+               const c of CHAPTERS
+            ) {
+
+               const opt =
+                  el(
+                     'option',
+                     {
+                        value: c
+                     },
+                     [c]
+                  );
+
+
+               if (
+                  c === value
+               ) {
+
+                  opt.setAttribute(
+                     'selected',
+                     'true'
+                  );
+               }
+
+
+               sel.append(opt);
+            }
+
+
+            return sel;
+         }
+
+
+         function eventCard(
+            row: any
+         ) {
+
+            const c =
+               el(
+                  'div',
+                  {
+                     class:
+                        'member-card event-card-edit'
+                  }
+               );
+
+
+            const header =
+               el(
+                  'div',
+                  {
+                     class: 'member-card-header'
+                  }
+               );
+
+
+            header.innerHTML = `
+               <span class="card-label">
+                  EVENT / ACTIVITY
+               </span>
+
+               <span class="event-status">
+                  ${row.published ? 'Published' : 'Draft'}
+               </span>
+            `;
+
+
+            const title =
+               field(
+                  '',
+                  row.title
+               );
+
+
+            const slug =
+               field(
+                  '',
+                  row.slug
+               );
+
+
+            const date =
+               el(
+                  'input',
+                  {
+                     type: 'date',
+                     class: 'field',
+                     value: row.event_date
+                  }
+               ) as HTMLInputElement;
+
+
+            const chapter =
+               chapterSelect(
+                  row.chapter
+               );
+
+
+            const description =
+               field(
+                  '',
+                  row.description,
+                  true,
+                  3
+               );
+
+
+            const body =
+               field(
+                  '',
+                  row.body || '',
+                  true,
+                  5
+               );
+
+
+            const location =
+               field(
+                  '',
+                  row.location || ''
+               );
+
+
+            const time =
+               field(
+                  '',
+                  row.event_time || ''
+               );
+
+
+            const regLink =
+               field(
+                  '',
+                  row.registration_link || ''
+               );
+
+
+            const tags =
+               field(
+                  '',
+                  (row.tags || []).join(', ')
+               );
+
+
+            let imageUrl:
+               string | null =
+               row.image_url || null;
+
+
+            const picker =
+               imagePicker(
+                  imageUrl,
+                  'events',
+                  (url) =>
+                     imageUrl = url
+               );
+
+
+            const regOpen =
+               el(
+                  'input',
+                  {
+                     type: 'checkbox'
+                  }
+               ) as HTMLInputElement;
+
+
+            regOpen.checked =
+               !!row.registration_open;
+
+
+            const featured =
+               el(
+                  'input',
+                  {
+                     type: 'checkbox'
+                  }
+               ) as HTMLInputElement;
+
+
+            featured.checked =
+               !!row.featured;
+
+
+            const published =
+               el(
+                  'input',
+                  {
+                     type: 'checkbox'
+                  }
+               ) as HTMLInputElement;
+
+
+            published.checked =
+               !!row.published;
+
+
+            const status =
+               el(
+                  'span',
+                  {
+                     class: 'muted small'
+                  },
+                  ['']
+               );
+
+
+            const save =
+               el(
+                  'button',
+                  {
+                     class:
+                        'btn primary small',
+                     type: 'button'
+                  },
+                  ['Save']
+               );
+
+
+            const del =
+               el(
+                  'button',
+                  {
+                     class:
+                        'btn danger small',
+                     type: 'button'
+                  },
+                  ['Delete']
+               );
+
+
+            save.addEventListener(
+               'click',
+               async () => {
+
+                  status.textContent =
+                     'Saving...';
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from('events')
+                        .update({
+
+                           title:
+                              title.value.trim(),
+
+                           slug:
+                              slug.value.trim(),
+
+                           event_date:
+                              date.value,
+
+                           chapter:
+                              chapter.value,
+
+                           description:
+                              description.value.trim(),
+
+                           body:
+                              body.value.trim()
+                              || null,
+
+                           location:
+                              location.value.trim()
+                              || null,
+
+                           event_time:
+                              time.value.trim()
+                              || null,
+
+                           registration_link:
+                              regLink.value.trim()
+                              || null,
+
+                           registration_open:
+                              regOpen.checked,
+
+                           featured:
+                              featured.checked,
+
+                           published:
+                              published.checked,
+
+                           tags:
+                              tags.value
+                                 .split(',')
+                                 .map(
+                                    (t) =>
+                                       t.trim()
+                                 )
+                                 .filter(Boolean),
+
+                           image_url:
+                              imageUrl
+                        })
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  if (err) {
+
+                     status.textContent =
+                        `Error: ${err.message}`;
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                  } else {
+
+                     status.textContent =
+                        'Saved successfully.';
+
+                     toast(
+                        'Event saved.'
+                     );
+                  }
+               }
+            );
+
+
+            del.addEventListener(
+               'click',
+               async () => {
+
+                  if (
+                     !confirm(
+                        `Delete event "${row.title}"?`
+                     )
+                  ) {
+                     return;
+                  }
+
+
+                  const {
+                     error: err
+                  } =
+                     await supabase
+                        .from('events')
+                        .delete()
+                        .eq(
+                           'id',
+                           row.id
+                        );
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  c.remove();
+
+                  toast(
+                     'Event deleted.'
+                  );
+               }
+            );
+
+
+            c.append(
+
+               header,
+
+               picker,
+
+               labeled(
+                  'Title',
+                  title
+               ),
+
+               labeled(
+                  'Slug',
+                  slug
+               ),
+
+               labeled(
+                  'Date',
+                  date
+               ),
+
+               labeled(
+                  'Chapter',
+                  chapter
+               ),
+
+               labeled(
+                  'Short description',
+                  description
+               ),
+
+               labeled(
+                  'Full details',
+                  body
+               ),
+
+               labeled(
+                  'Location',
+                  location
+               ),
+
+               labeled(
+                  'Time',
+                  time
+               ),
+
+               labeled(
+                  'Registration link',
+                  regLink
+               ),
+
+               labeled(
+                  'Tags',
+                  tags
+               ),
+
+               checkboxRow(
+                  'Registration open',
+                  regOpen
+               ),
+
+               checkboxRow(
+                  'Featured',
+                  featured
+               ),
+
+               checkboxRow(
+                  'Published',
+                  published
+               ),
+
+               el(
+                  'div',
+                  {
+                     class: 'row-actions'
+                  },
+                  [
+                     save,
+                     del,
+                     status
+                  ]
+               )
+            );
+
+
+            return c;
+         }
+
+
+         function checkboxRow(
+            text: string,
+            box: HTMLInputElement
+         ) {
+
+            const wrap =
+               el(
+                  'label',
+                  {
+                     class: 'checkbox-row'
+                  }
+               );
+
+
+            wrap.append(
+               box,
+               el(
+                  'span',
+                  {},
+                  [text]
+               )
+            );
+
+
+            return wrap;
+         }
+
+
+         function addEventForm() {
+
+            const form =
+               el(
+                  'form',
+                  {
+                     class: 'add-form'
+                  }
+               );
+
+
+            const heading =
+               el(
+                  'div',
+                  {
+                     class: 'add-form-heading'
+                  }
+               );
+
+
+            heading.innerHTML = `
+               <span class="add-icon">+</span>
+
+               <div>
+                  <h3>
+                     Add new activity
+                  </h3>
+
+                  <p>
+                     Create a new activity or event.
+                  </p>
+               </div>
+            `;
+
+
+            const title =
+               field('', '');
+
+
+            const slug =
+               field('', '');
+
+
+            const date =
+               el(
+                  'input',
+                  {
+                     type: 'date',
+                     class: 'field'
+                  }
+               ) as HTMLInputElement;
+
+
+            const chapter =
+               chapterSelect('SB');
+
+
+            const description =
+               field(
+                  '',
+                  '',
+                  true,
+                  3
+               );
+
+
+            title.placeholder =
+               'Event title';
+
+
+            slug.placeholder =
+               'url-slug-like-this';
+
+
+            description.placeholder =
+               'One or two sentences about the event';
+
+
+            let imageUrl:
+               string | null = null;
+
+
+            const picker =
+               imagePicker(
+                  null,
+                  'events',
+                  (url) =>
+                     imageUrl = url
+               );
+
+
+            const submit =
+               el(
+                  'button',
+                  {
+                     type: 'submit',
+                     class: 'btn primary'
+                  },
+                  ['+ Add activity / event']
+               );
+
+
+            form.append(
+
+               heading,
+
+               picker,
+
+               labeled(
+                  'Title',
+                  title
+               ),
+
+               labeled(
+                  'Slug',
+                  slug
+               ),
+
+               labeled(
+                  'Date',
+                  date
+               ),
+
+               labeled(
+                  'Chapter',
+                  chapter
+               ),
+
+               labeled(
+                  'Short description',
+                  description
+               ),
+
+               submit
+            );
+
+
+            form.addEventListener(
+               'submit',
+               async (e) => {
+
+                  e.preventDefault();
+
+
+                  if (
+                     !title.value.trim()
+                     ||
+                     !slug.value.trim()
+                     ||
+                     !date.value
+                     ||
+                     !description.value.trim()
+                  ) {
+
+                     toast(
+                        'Title, slug, date and description are required.',
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  submit.setAttribute(
+                     'disabled',
+                     'true'
+                  );
+
+
+                  const {
+                     data: inserted,
+                     error: err
+                  } =
+                     await supabase
+                        .from('events')
+                        .insert({
+
+                           title:
+                              title.value.trim(),
+
+                           slug:
+                              slug.value
+                                 .trim()
+                                 .toLowerCase(),
+
+                           event_date:
+                              date.value,
+
+                           chapter:
+                              chapter.value,
+
+                           description:
+                              description.value.trim(),
+
+                           image_url:
+                              imageUrl,
+
+                           published:
+                              false
+                        })
+                        .select()
+                        .single();
+
+
+                  submit.removeAttribute(
+                     'disabled'
+                  );
+
+
+                  if (err) {
+
+                     toast(
+                        err.message,
+                        'err'
+                     );
+
+                     return;
+                  }
+
+
+                  list.append(
+                     eventCard(inserted)
+                  );
+
+
+                  form.reset();
+
+                  imageUrl = null;
+
+
+                  toast(
+                     'Activity added as a draft.'
+                  );
+               }
+            );
+
+
+            return form;
+         }
+      }
+
+
+      // ============================================================
+      // CONTACT PAGE
+      // ============================================================
+
+      async function renderContactPanel(
+         host: HTMLElement
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+         const { data, error } =
+            await supabase
+               .from('contact_page')
+               .select('*')
+               .eq('id', 'main')
+               .maybeSingle();
+
+         if (error) {
+            host.replaceChildren(
+               errorState(error.message)
+            );
+            return;
+         }
+
+         const row = data || {
+            id: 'main',
+            hero_title: 'Connect with IEEE MIST',
+            hero_description:
+               'Questions about membership, an event, or a collaboration? Send us a message and the right person on the committee will get back to you.',
+            address_lines: [
+               'IEEE MIST Student Branch',
+               'Military Institute of Science and Technology',
+               'Mirpur Cantonment, Dhaka-1216, Bangladesh'
+            ],
+            email: 'ieeemistsb@mist.ac.bd',
+            office_hours: 'Sunday — Thursday, 10:00 AM to 4:00 PM',
+            map_image_url: '',
+            socials: [
+               { label: 'Facebook', href: 'https://www.facebook.com' },
+               { label: 'LinkedIn', href: 'https://www.linkedin.com' },
+               { label: 'Instagram', href: 'https://www.instagram.com' },
+               { label: 'YouTube', href: 'https://www.youtube.com' }
+            ],
+            subjects: [
+               'General Inquiry',
+               'Membership',
+               'Event or workshop',
+               'Collaboration / sponsorship',
+               'Chapter enquiry'
+            ],
+            faqs: []
+         };
+
+         host.replaceChildren();
+
+         host.append(
+            sectionHeader(
+               'Contact Page',
+               'Edit the contact page content and manage messages submitted through the contact form.'
+            )
+         );
+
+         const form = el('div', { class: 'editor-card' });
+
+         const heroTitle = field('', row.hero_title || '');
+         const heroDescription = field('', row.hero_description || '', true, 4);
+         const address = field(
+            '',
+            Array.isArray(row.address_lines)
+               ? row.address_lines.join('\n')
+               : '',
+            true,
+            4
+         );
+         const email = field('', row.email || '');
+         const officeHours = field('', row.office_hours || '');
+         const mapUrl = field('', row.map_image_url || '');
+         const subjects = field(
+            '',
+            Array.isArray(row.subjects)
+               ? row.subjects.join('\n')
+               : '',
+            true,
+            5
+         );
+         const socials = field(
+            '',
+            Array.isArray(row.socials)
+               ? row.socials.map((x: any) => `${x.label} | ${x.href}`).join('\n')
+               : '',
+            true,
+            6
+         );
+         const faqs = field(
+            '',
+            Array.isArray(row.faqs)
+               ? row.faqs.map((x: any) => `${x.question} | ${x.answer}`).join('\n')
+               : '',
+            true,
+            8
+         );
+
+         heroTitle.placeholder = 'Connect with IEEE MIST';
+         heroDescription.placeholder = 'Hero description';
+         address.placeholder = 'One address line per line';
+         email.placeholder = 'ieeemistsb@mist.ac.bd';
+         officeHours.placeholder = 'Sunday — Thursday, 10:00 AM to 4:00 PM';
+         mapUrl.placeholder = 'https://...';
+         subjects.placeholder = 'One subject per line';
+         socials.placeholder = 'Facebook | https://facebook.com/...\nLinkedIn | https://linkedin.com/...';
+         faqs.placeholder = 'Question | Answer';
+
+         const save = el(
+            'button',
+            {
+               type: 'button',
+               class: 'btn primary'
+            },
+            ['Save Contact Page']
+         );
+
+         const saveStatus = el(
+            'span',
+            {
+               class: 'muted small'
+            },
+            ['']
+         );
+
+         form.append(
+            el('h3', {}, ['Page content']),
+            labeled('Hero title', heroTitle),
+            labeled('Hero description', heroDescription),
+            labeled('Address (one line per line)', address),
+            labeled('Contact email', email),
+            labeled('Office hours', officeHours),
+            labeled('Map image URL', mapUrl),
+            labeled('Form subjects (one per line)', subjects),
+            labeled('Social links (Label | URL)', socials),
+            labeled('FAQs (Question | Answer, one per line)', faqs),
+            el(
+               'div',
+               { class: 'publish-action' },
+               [save, saveStatus]
+            )
+         );
+
+         save.addEventListener('click', async () => {
+            save.setAttribute('disabled', 'true');
+            saveStatus.textContent = 'Saving...';
+
+            const parseLines = (value: string) =>
+               value
+                  .split('\n')
+                  .map((x) => x.trim())
+                  .filter(Boolean);
+
+            const parsedSocials = parseLines(socials.value)
+               .map((line) => {
+                  const [label, ...rest] = line.split('|');
+                  return {
+                     label: (label || '').trim(),
+                     href: rest.join('|').trim()
+                  };
+               })
+               .filter((x) => x.label && x.href);
+
+            const parsedFaqs = parseLines(faqs.value)
+               .map((line) => {
+                  const [question, ...rest] = line.split('|');
+                  return {
+                     question: (question || '').trim(),
+                     answer: rest.join('|').trim()
+                  };
+               })
+               .filter((x) => x.question && x.answer);
+
+            const { error: saveError } =
+               await supabase
+                  .from('contact_page')
+                  .upsert({
+                     id: 'main',
+                     hero_title: heroTitle.value.trim(),
+                     hero_description: heroDescription.value.trim(),
+                     address_lines: parseLines(address.value),
+                     email: email.value.trim(),
+                     office_hours: officeHours.value.trim(),
+                     map_image_url: mapUrl.value.trim() || null,
+                     socials: parsedSocials,
+                     subjects: parseLines(subjects.value),
+                     faqs: parsedFaqs,
+                     updated_at: new Date().toISOString()
+                  });
+
+            save.removeAttribute('disabled');
+
+            if (saveError) {
+               saveStatus.textContent = `Error: ${saveError.message}`;
+               toast('Could not save Contact page.', 'err');
+               return;
+            }
+
+            saveStatus.textContent = 'Saved successfully.';
+            toast('Contact page saved.');
+         });
+
+         const messagesSection = el(
+            'div',
+            { class: 'editor-card' }
+         );
+
+         const messagesHeader = el(
+            'div',
+            { class: 'section-header' }
+         );
+
+         messagesHeader.innerHTML = `
+            <div>
+               <h3>Contact Messages</h3>
+               <p>Messages submitted from the public contact form.</p>
+            </div>
+         `;
+
+         const messagesList = el(
+            'div',
+            { class: 'card-list' }
+         );
+
+         messagesSection.append(
+            messagesHeader,
+            messagesList
+         );
+
+         host.append(form, messagesSection);
+
+         async function loadMessages() {
+            messagesList.replaceChildren(
+               loadingState()
+            );
+
+            const { data: messages, error: messagesError } =
+               await supabase
+                  .from('contact_messages')
+                  .select('*')
+                  .order('created_at', { ascending: false });
+
+            if (messagesError) {
+               messagesList.replaceChildren(
+                  errorState(messagesError.message)
+               );
+               return;
+            }
+
+            messagesList.replaceChildren();
+
+            if (!messages?.length) {
+               messagesList.append(
+                  el(
+                     'div',
+                     { class: 'state-card' },
+                     ['No contact messages yet.']
+                  )
+               );
+               return;
+            }
+
+            for (const message of messages) {
+               const card = el(
+                  'article',
+                  { class: 'member-card' }
+               );
+
+               const created = message.created_at
+                  ? new Date(message.created_at).toLocaleString()
+                  : '';
+
+               card.innerHTML = `
+                  <div class="member-card-header">
+                     <span class="card-label">${message.subject || 'General Inquiry'}</span>
+                     <span class="member-id">${created}</span>
+                  </div>
+
+                  <h3>${escapeHtml(message.name || 'Unknown')}</h3>
+
+                  <p class="muted">
+                     <a href="mailto:${escapeAttr(message.email || '')}">
+                        ${escapeHtml(message.email || '')}
+                     </a>
+                  </p>
+
+                  <p class="message-preview">
+                     ${escapeHtml(message.message || '')}
+                  </p>
+               `;
+
+               const actions = el(
+                  'div',
+                  { class: 'member-actions' }
+               );
+
+               const status = field(
+                  '',
+                  message.status || 'new'
+               );
+
+               status.placeholder = 'new / read / replied';
+
+               const saveStatus = el(
+                  'button',
+                  {
+                     type: 'button',
+                     class: 'btn small'
+                  },
+                  ['Update status']
+               );
+
+               saveStatus.addEventListener('click', async () => {
+                  saveStatus.setAttribute('disabled', 'true');
+
+                  const { error: updateError } =
+                     await supabase
+                        .from('contact_messages')
+                        .update({
+                           status: status.value.trim() || 'new'
+                        })
+                        .eq('id', message.id);
+
+                  saveStatus.removeAttribute('disabled');
+
+                  if (updateError) {
+                     toast(updateError.message, 'err');
+                  } else {
+                     toast('Message status updated.');
+                  }
+               });
+
+               actions.append(
+                  labeled('Status', status),
+                  saveStatus
+               );
+
+               card.append(actions);
+               messagesList.append(card);
+            }
+         }
+
+         await loadMessages();
+
+         supabase
+            .channel('contact-dashboard-live')
+            .on(
+               'postgres_changes',
+               {
+                  event: '*',
+                  schema: 'public',
+                  table: 'contact_messages'
+               },
+               () => {
+                  void loadMessages();
+               }
+            )
+            .subscribe();
+      }
+
+      function escapeHtml(value: string) {
+         return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+      }
+
+      function escapeAttr(value: string) {
+         return escapeHtml(value);
+      }
+
+
+
+      // ============================================================
+      // PUBLISHING
+      // ============================================================
+
+      async function renderSettingsPanel(
+         host: HTMLElement
+      ) {
+
+         host.replaceChildren(
+            loadingState()
+         );
+
+
+         const {
+            data,
+            error
+         } =
+            await supabase
+               .from('site_settings')
+               .select('*')
+               .eq(
+                  'key',
+                  'deploy_hook_url'
+               )
+               .maybeSingle();
+
+
+         host.replaceChildren();
+
+
+         host.append(
+            sectionHeader(
+               'Publishing',
+               'Save your content first, then trigger a new website build.'
+            )
+         );
+
+
+         const explainer =
+            el(
+               'div',
+               {
+                  class: 'publish-card'
+               }
+            );
+
+
+         explainer.innerHTML = `
+            <div class="publish-icon">
+               🚀
+            </div>
+
+            <div>
+               <h3>
+                  Publish website changes
+               </h3>
+
+               <p>
+                  Saved content is stored in Supabase.
+                  Because the public website is statically
+                  generated, the live website needs a new
+                  Vercel build to display the latest changes.
+               </p>
+
+               <p>
+                  Add your Vercel Deploy Hook URL below.
+                  After saving your content, click
+                  <strong>Publish changes</strong>.
+               </p>
+            </div>
+         `;
+
+
+         const hookInput =
+            field(
+               '',
+               data?.value || ''
+            );
+
+
+         hookInput.placeholder =
+            'https://api.vercel.com/v1/integrations/deploy/...';
+
+
+         const saveHook =
+            el(
+               'button',
+               {
+                  class: 'btn small',
+                  type: 'button'
+               },
+               ['Save hook URL']
+            );
+
+
+         const hookStatus =
+            el(
+               'span',
+               {
+                  class: 'muted small'
+               },
+               ['']
+            );
+
+
+         saveHook.addEventListener(
+            'click',
+            async () => {
+
+               hookStatus.textContent =
+                  'Saving...';
+
+
+               const {
+                  error: err
+               } =
+                  await supabase
+                     .from('site_settings')
+                     .upsert({
+                        key:
+                           'deploy_hook_url',
+
+                        value:
+                           hookInput.value.trim(),
+
+                        updated_at:
+                           new Date().toISOString()
+                     });
+
+
+               hookStatus.textContent =
+                  err
+                     ? `Error: ${err.message}`
+                     : 'Hook URL saved.';
+
+
+               if (!err) {
+
+                  toast(
+                     'Deploy Hook URL saved.'
+                  );
+               }
+            }
+         );
+
+
+         const publishBtn =
+            el(
+               'button',
+               {
+                  class:
+                     'btn primary publish-button',
+                  type: 'button'
+               },
+               ['🚀 Publish changes now']
+            );
+
+
+         const publishStatus =
+            el(
+               'p',
+               {
+                  class: 'muted small'
+               },
+               ['']
+            );
+
+
+         publishBtn.addEventListener(
+            'click',
+            async () => {
+
+               const url =
+                  hookInput.value.trim();
+
+
+               if (!url) {
+
+                  publishStatus.textContent =
+                     'Add and save a Deploy Hook URL first.';
+
+                  return;
+               }
+
+
+               publishBtn.setAttribute(
+                  'disabled',
+                  'true'
+               );
+
+
+               publishBtn.textContent =
+                  'Publishing...';
+
+
+               publishStatus.textContent =
+                  'Triggering a new Vercel build...';
+
+
+               try {
+
+                  await fetch(
+                     url,
+                     {
+                        method: 'POST',
+                        mode: 'no-cors'
+                     }
+                  );
+
+
+                  publishStatus.textContent =
+                     'Build triggered. Changes should go live shortly.';
+
+
+                  toast(
+                     'Publish triggered successfully.'
+                  );
+
+               } catch (err: any) {
+
+                  publishStatus.textContent =
+                     `Could not reach the deploy hook: ${
+                        err.message || err
+                     }`;
+
+                  toast(
+                     'Could not trigger publishing.',
+                     'err'
+                  );
+               }
+
+
+               publishBtn.removeAttribute(
+                  'disabled'
+               );
+
+
+               publishBtn.textContent =
+                  '🚀 Publish changes now';
+            }
+         );
+
+
+         const hookSection =
+            el(
+               'div',
+               {
+                  class: 'hook-section'
+               }
+            );
+
+
+         hookSection.append(
+
+            labeled(
+               'Vercel Deploy Hook URL',
+               hookInput
+            ),
+
+            el(
+               'div',
+               {
+                  class: 'row-actions'
+               },
+               [
+                  saveHook,
+                  hookStatus
+               ]
+            )
+         );
+
+
+         host.append(
+            explainer,
+            hookSection,
+            el(
+               'div',
+               {
+                  class: 'publish-action'
+               },
+               [
+                  publishBtn,
+                  publishStatus
+               ]
+            )
+         );
+      }
+
+
+      // ============================================================
+      // AUTH BOOT
+      // ============================================================
+
+     // ============================================================
+// AUTH BOOT
+// ============================================================
+
+let renderedUserId: string | null = null;
+let authGeneration = 0;
+
+async function syncAuthUI(session: any) {
+   const generation = ++authGeneration;
+   const user = session?.user;
+
+   // User signed out
+   if (!user) {
+      renderedUserId = null;
+      renderLogin();
+      return;
+   }
+
+   // IMPORTANT:
+   // Ignore INITIAL_SESSION, TOKEN_REFRESHED and other auth events
+   // when the same user is already rendered.
+   if (renderedUserId === user.id) {
+      return;
+   }
+
+   renderedUserId = user.id;
+
+   try {
+      await renderShell(
+         user.email || 'Signed in'
+      );
+   } catch (error) {
+      // Allow another attempt if rendering fails.
+      if (generation === authGeneration) {
+         renderedUserId = null;
+         console.error(
+            'Dashboard render failed:',
+            error
+         );
+      }
+   }
+}
+
+
+// Initial dashboard load
+const {
+   data: {
+      session
+   }
+} = await supabase.auth.getSession();
+
+await syncAuthUI(session);
+
+
+// Listen for real authentication changes.
+// Do NOT rebuild the dashboard for token refreshes.
+supabase.auth.onAuthStateChange(
+   (_event, session) => {
+      queueMicrotask(() => {
+         void syncAuthUI(session);
+      });
+   }
+);
+   </script>
+
+
+   <!-- ============================================================
+        DASHBOARD CSS
+        IMPORTANT:
+        This must be global because the dashboard UI is generated
+        dynamically by JavaScript.
+        ============================================================ -->
+
+   <style is:global>
+
+      /* ==========================================================
+         VARIABLES
+         ========================================================== */
+
+      :root {
+
+         --ieee-blue: #00629b;
+         --ieee-blue-dark: #004f7d;
+         --ieee-navy: #002855;
+         --ieee-navy-dark: #001b38;
+
+         --bg: #f4f7fb;
+         --surface: #ffffff;
+         --surface-soft: #f8fafc;
+
+         --text: #172033;
+         --text-soft: #667085;
+         --text-muted: #98a2b3;
+
+         --border: #e4e7ec;
+         --border-dark: #d0d5dd;
+
+         --success: #067647;
+         --success-bg: #ecfdf3;
+
+         --danger: #b42318;
+         --danger-bg: #fef3f2;
+
+         --warning: #b54708;
+         --warning-bg: #fffaeb;
+
+         --radius-sm: 8px;
+         --radius-md: 12px;
+         --radius-lg: 16px;
+
+         --shadow-sm:
+            0 1px 3px rgba(16, 24, 40, 0.06);
+
+         --shadow-md:
+            0 5px 15px rgba(16, 24, 40, 0.07);
+
+         --shadow-lg:
+            0 15px 35px rgba(16, 24, 40, 0.09);
+      }
+
+
+      /* ==========================================================
+         RESET
+         ========================================================== */
+
+      * {
+         box-sizing: border-box;
+      }
+
+
+      html {
+         scroll-behavior: smooth;
+      }
+
+
+      body {
+         margin: 0;
+
+         min-height: 100vh;
+
+         background:
+            linear-gradient(
+               180deg,
+               #f8fafc 0%,
+               #f2f5f9 100%
+            );
+
+         color: var(--text);
+
+         font-family:
+            'Inter',
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
+
+         -webkit-font-smoothing: antialiased;
+      }
+
+
+      button,
+      input,
+      textarea,
+      select {
+         font: inherit;
+      }
+
+
+      button {
+         -webkit-tap-highlight-color: transparent;
+      }
+
+
+      /* ==========================================================
+         LOADING
+         ========================================================== */
+
+      .boot {
+         min-height: 100vh;
+
+         display: flex;
+         flex-direction: column;
+
+         align-items: center;
+         justify-content: center;
+
+         gap: 14px;
+
+         margin: 0;
+
+         color: var(--text-soft);
+
+         font-size: 14px;
+      }
+
+
+      .boot-spinner,
+      .loading-spinner {
+         width: 30px;
+         height: 30px;
+
+         border: 3px solid #dbe4ec;
+         border-top-color: var(--ieee-blue);
+
+         border-radius: 50%;
+
+         animation:
+            spin 0.8s linear infinite;
+      }
+
+
+      .loading-spinner {
+         width: 26px;
+         height: 26px;
+      }
+
+
+      @keyframes spin {
+
+         to {
+            transform: rotate(360deg);
+         }
+      }
+
+
+      /* ==========================================================
+         LOGIN
+         ========================================================== */
+
+      .login-page {
+         min-height: 100vh;
+
+         display: flex;
+         flex-direction: column;
+
+         align-items: center;
+         justify-content: center;
+
+         padding: 30px 20px;
+
+         background:
+            radial-gradient(
+               circle at top,
+               rgba(0, 98, 155, 0.10),
+               transparent 45%
+            ),
+            var(--bg);
+      }
+
+
+      .login-card {
+         width: min(
+            430px,
+            100%
+         );
+
+         padding: 38px;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 16px;
+
+         background: var(--surface);
+
+         border:
+            1px solid var(--border);
+
+         border-radius: 20px;
+
+         box-shadow: var(--shadow-lg);
+      }
+
+
+      .login-logo {
+         display: flex;
+         align-items: center;
+
+         gap: 12px;
+
+         margin-bottom: 6px;
+      }
+
+
+      .login-logo-ieee {
+         width: 52px;
+         height: 52px;
+
+         display: flex;
+         align-items: center;
+         justify-content: center;
+
+         background: var(--ieee-blue);
+
+         border-radius: 12px;
+
+         color: white;
+
+         font-size: 13px;
+         font-weight: 800;
+      }
+
+
+      .login-logo-text {
+         color: var(--ieee-navy);
+
+         font-size: 13px;
+         font-weight: 700;
+      }
+
+
+      .login-card h1 {
+         margin: 0;
+
+         color: var(--ieee-navy);
+
+         font-size: 26px;
+         line-height: 1.2;
+      }
+
+
+      .login-description {
+         margin: -5px 0 6px;
+
+         color: var(--text-soft);
+
+         font-size: 14px;
+
+         line-height: 1.6;
+      }
+
+
+      .login-button {
+         width: 100%;
+
+         min-height: 46px;
+
+         margin-top: 4px;
+      }
+
+
+      .login-footer {
+         margin: 20px 0 0;
+
+         color: var(--text-muted);
+
+         font-size: 12px;
+
+         text-align: center;
+      }
+
+
+      /* ==========================================================
+         HEADER
+         ========================================================== */
+
+      .topbar {
+         position: sticky;
+
+         top: 0;
+
+         z-index: 100;
+
+         min-height: 72px;
+
+         padding:
+            0 32px;
+
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+
+         gap: 20px;
+
+         background:
+            linear-gradient(
+               135deg,
+               var(--ieee-navy),
+               var(--ieee-blue)
+            );
+
+         color: white;
+
+         box-shadow:
+            0 3px 15px
+            rgba(0, 40, 85, 0.20);
+      }
+
+
+      .brand {
+         display: flex;
+         align-items: center;
+
+         gap: 12px;
+      }
+
+
+      .brand-mark {
+         width: 42px;
+         height: 42px;
+
+         display: flex;
+         align-items: center;
+         justify-content: center;
+
+         background:
+            rgba(255,255,255,0.10);
+
+         border:
+            1px solid
+            rgba(255,255,255,0.22);
+
+         border-radius: 10px;
+
+         font-size: 11px;
+         font-weight: 800;
+      }
+
+
+      .brand-content {
+         display: flex;
+         flex-direction: column;
+
+         gap: 2px;
+      }
+
+
+      .brand-content strong {
+         font-size: 15px;
+         letter-spacing: 0.01em;
+      }
+
+
+      .brand-content span {
+         color:
+            rgba(255,255,255,0.70);
+
+         font-size: 11px;
+      }
+
+
+      .user-area {
+         display: flex;
+         align-items: center;
+
+         gap: 14px;
+      }
+
+
+      .user-info {
+         display: flex;
+         flex-direction: column;
+
+         align-items: flex-end;
+
+         gap: 2px;
+      }
+
+
+      .user-label {
+         color:
+            rgba(255,255,255,0.58);
+
+         font-size: 10px;
+
+         text-transform: uppercase;
+
+         letter-spacing: 0.06em;
+      }
+
+
+      .user-email {
+         max-width: 280px;
+
+         overflow: hidden;
+
+         text-overflow: ellipsis;
+
+         white-space: nowrap;
+
+         color: white;
+
+         font-size: 12px;
+      }
+
+
+      /* ==========================================================
+         DASHBOARD INTRO
+         ========================================================== */
+
+      .dashboard-intro {
+         width: min(
+            1180px,
+            calc(100% - 40px)
+         );
+
+         margin: 0 auto;
+
+         padding: 38px 0 25px;
+      }
+
+
+      .eyebrow {
+         display: inline-block;
+
+         margin-bottom: 8px;
+
+         color: var(--ieee-blue);
+
+         font-size: 10px;
+
+         font-weight: 800;
+
+         letter-spacing: 0.12em;
+      }
+
+
+      .dashboard-intro h1 {
+         margin: 0 0 7px;
+
+         color: var(--ieee-navy);
+
+         font-size: 30px;
+
+         line-height: 1.2;
+
+         letter-spacing: -0.025em;
+      }
+
+
+      .dashboard-intro p {
+         margin: 0;
+
+         color: var(--text-soft);
+
+         font-size: 14px;
+
+         line-height: 1.6;
+      }
+
+
+      /* ==========================================================
+         WORDPRESS-STYLE SIDEBAR
+         ========================================================== */
+
+      .dashboard-layout {
+         display: grid;
+         grid-template-columns: 250px minmax(0, 1fr);
+         min-height: calc(100vh - 72px);
+         background: #f5f7fa;
+      }
+
+      .dashboard-sidebar {
+         position: sticky;
+         top: 72px;
+         height: calc(100vh - 72px);
+         overflow-y: auto;
+         padding: 22px 12px 30px;
+         background: #ffffff;
+         border-right: 1px solid var(--border);
+         box-shadow: 2px 0 12px rgba(15, 23, 42, 0.04);
+      }
+
+      .sidebar-top {
+         padding: 5px 14px 22px;
+         margin-bottom: 4px;
+         border-bottom: 1px solid #eef1f5;
+      }
+
+      .sidebar-top strong {
+         display: block;
+         margin-top: 5px;
+         color: var(--ieee-navy);
+         font-size: 18px;
+         letter-spacing: -0.02em;
+      }
+
+      .sidebar-kicker {
+         color: var(--ieee-blue);
+         font-size: 9px;
+         font-weight: 800;
+         letter-spacing: 0.14em;
+      }
+
+      .sidebar-group-label {
+         padding: 20px 14px 7px;
+         color: #98a2b3;
+         font-size: 10px;
+         font-weight: 800;
+         letter-spacing: 0.12em;
+      }
+
+      .tab {
+         width: 100%;
+         min-height: 43px;
+         display: flex;
+         align-items: center;
+         gap: 11px;
+         padding: 10px 13px;
+         margin: 2px 0;
+         border: 0;
+         border-radius: 7px;
+         background: transparent;
+         color: #667085;
+         cursor: pointer;
+         font-size: 13px;
+         font-weight: 600;
+         text-align: left;
+         transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+      }
+
+      .tab:hover {
+         color: var(--ieee-navy);
+         background: #f3f6f9;
+      }
+
+      .tab.active {
+         color: var(--ieee-blue);
+         background: #eaf4fa;
+         box-shadow: inset 3px 0 0 var(--ieee-blue);
+      }
+
+      .tab-icon {
+         width: 22px;
+         flex: 0 0 22px;
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         font-size: 15px;
+      }
+
+      .dashboard-content {
+         min-width: 0;
+         background: #f7f9fb;
+      }
+
+      .dashboard-content .dashboard-intro {
+         width: min(1180px, calc(100% - 56px));
+         padding: 34px 0 22px;
+      }
+
+      /* ==========================================================
+         MAIN CONTENT
+         ========================================================== */
+
+      .panel-host {
+         width: min(1180px, calc(100% - 56px));
+         margin: 0 auto;
+         padding: 4px 0 80px;
+      }
+
+      .panel {
+         display: none;
+
+         flex-direction: column;
+
+         gap: 18px;
+
+         animation:
+            panelIn .2s ease;
+      }
+
+
+      .panel.active {
+         display: flex;
+      }
+
+
+      @keyframes panelIn {
+
+         from {
+            opacity: 0;
+
+            transform:
+               translateY(5px);
+         }
+
+         to {
+            opacity: 1;
+
+            transform:
+               translateY(0);
+         }
+      }
+
+
+      /* ==========================================================
+         SECTION HEADER
+         ========================================================== */
+
+      .section-header {
+         display: flex;
+         justify-content: space-between;
+
+         padding-bottom: 4px;
+      }
+
+
+      .section-header h2 {
+         margin: 0 0 6px;
+
+         color: var(--ieee-navy);
+
+         font-size: 22px;
+
+         line-height: 1.3;
+
+         letter-spacing: -0.02em;
+      }
+
+
+      .section-header p {
+         margin: 0;
+
+         color: var(--text-soft);
+
+         font-size: 13px;
+
+         line-height: 1.6;
+      }
+
+
+      /* ==========================================================
+         FORMS
+         ========================================================== */
+
+      .edit-form,
+      .add-form,
+      .member-card {
+         background: var(--surface);
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-lg);
+
+         box-shadow:
+            var(--shadow-sm);
+      }
+
+
+      .edit-form {
+         padding: 28px;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 20px;
+      }
+
+
+      .add-form {
+         padding: 24px;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 14px;
+
+         background:
+            linear-gradient(
+               180deg,
+               #ffffff,
+               #fafcff
+            );
+
+         border-style: dashed;
+      }
+
+
+      .add-form-heading {
+         display: flex;
+         align-items: center;
+
+         gap: 12px;
+
+         margin-bottom: 4px;
+      }
+
+
+      .add-form-heading h3 {
+         margin: 0 0 2px;
+
+         color: var(--ieee-navy);
+
+         font-size: 15px;
+      }
+
+
+      .add-form-heading p {
+         margin: 0;
+
+         color: var(--text-soft);
+
+         font-size: 12px;
+      }
+
+
+      .add-icon {
+         width: 38px;
+         height: 38px;
+
+         display: flex;
+         align-items: center;
+         justify-content: center;
+
+         background:
+            var(--ieee-light);
+
+         color:
+            var(--ieee-blue);
+
+         border-radius: 10px;
+
+         font-size: 20px;
+         font-weight: 500;
+      }
+
+
+      .labeled {
+         display: flex;
+         flex-direction: column;
+
+         gap: 7px;
+      }
+
+
+      .label-text {
+         color: #344054;
+
+         font-size: 12px;
+
+         font-weight: 700;
+      }
+
+
+      /* ==========================================================
+         INPUTS
+         ========================================================== */
+
+      .field {
+         width: 100%;
+
+         min-height: 44px;
+
+         padding:
+            10px 13px;
+
+         border:
+            1px solid var(--border-dark);
+
+         border-radius:
+            var(--radius-sm);
+
+         background: #fff;
+
+         color: var(--text);
+
+         font-size: 13px;
+
+         outline: none;
+
+         transition:
+            border-color .15s ease,
+            box-shadow .15s ease;
+      }
+
+
+      .field::placeholder {
+         color:
+            #98a2b3;
+      }
+
+
+      .field:hover {
+         border-color:
+            #98a2b3;
+      }
+
+
+      .field:focus {
+         border-color:
+            var(--ieee-blue);
+
+         box-shadow:
+            0 0 0 3px
+            rgba(0, 98, 155, 0.11);
+      }
+
+
+      textarea.field {
+         min-height: 110px;
+
+         resize: vertical;
+
+         line-height: 1.65;
+      }
+
+
+      .field.small {
+         width: 90px;
+
+         min-height: 38px;
+      }
+
+
+      /* ==========================================================
+         BUTTONS
+         ========================================================== */
+
+      .btn {
+         min-height: 40px;
+
+         padding:
+            8px 15px;
+
+         border:
+            1px solid var(--border-dark);
+
+         border-radius:
+            var(--radius-sm);
+
+         background: white;
+
+         color: #344054;
+
+         font-size: 12px;
+
+         font-weight: 700;
+
+         cursor: pointer;
+
+         transition:
+            background .15s ease,
+            border-color .15s ease,
+            transform .15s ease,
+            box-shadow .15s ease;
+      }
+
+
+      .btn:hover {
+         background: #f8fafc;
+
+         border-color:
+            #98a2b3;
+
+         box-shadow:
+            var(--shadow-sm);
+      }
+
+
+      .btn:active {
+         transform:
+            translateY(1px);
+      }
+
+
+      .btn.small {
+         min-height: 36px;
+
+         padding:
+            7px 12px;
+
+         font-size: 12px;
+      }
+
+
+      .btn.primary {
+         background:
+            var(--ieee-blue);
+
+         border-color:
+            var(--ieee-blue);
+
+         color: white;
+
+         box-shadow:
+            0 3px 8px
+            rgba(0, 98, 155, 0.17);
+      }
+
+
+      .btn.primary:hover {
+         background:
+            var(--ieee-blue-dark);
+
+         border-color:
+            var(--ieee-blue-dark);
+
+         box-shadow:
+            0 5px 12px
+            rgba(0, 98, 155, 0.22);
+      }
+
+
+      .btn.ghost {
+         min-height: 36px;
+
+         background:
+            rgba(255,255,255,0.08);
+
+         border-color:
+            rgba(255,255,255,0.25);
+
+         color: white;
+      }
+
+
+      .btn.ghost:hover {
+         background:
+            rgba(255,255,255,0.16);
+
+         border-color:
+            rgba(255,255,255,0.4);
+      }
+
+
+      .btn.danger {
+         background:
+            var(--danger-bg);
+
+         border-color:
+            #fecdca;
+
+         color:
+            var(--danger);
+      }
+
+
+      .btn.danger:hover {
+         background:
+            #fee4e2;
+
+         border-color:
+            #fda29b;
+      }
+
+
+      .btn:disabled {
+         opacity: .55;
+
+         cursor: not-allowed;
+
+         box-shadow: none;
+      }
+
+
+      /* ==========================================================
+         IMAGE PICKER
+         ========================================================== */
+
+      .imgpick {
+         min-height: 110px;
+
+         display: flex;
+         align-items: center;
+
+         gap: 18px;
+
+         padding: 12px;
+
+         background:
+            var(--surface-soft);
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-md);
+      }
+
+
+      .imgpick-preview {
+         width: 88px;
+         height: 88px;
+
+         flex: 0 0 88px;
+
+         object-fit: cover;
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            10px;
+
+         background:
+            #eef2f6;
+
+         box-shadow:
+            var(--shadow-sm);
+      }
+
+
+      .imgpick-info {
+         min-width: 0;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 5px;
+      }
+
+
+      .imgpick-title {
+         color: var(--ieee-navy);
+
+         font-size: 13px;
+      }
+
+
+      .imgpick-help {
+         color:
+            var(--text-muted);
+
+         font-size: 11px;
+      }
+
+
+      .imgpick-input {
+         max-width: 320px;
+
+         margin-top: 4px;
+
+         color:
+            var(--text-soft);
+
+         font-size: 11px;
+      }
+
+
+      .imgpick-status {
+         font-size: 11px;
+
+         color:
+            var(--text-soft);
+      }
+
+
+      .success-text {
+         color:
+            var(--success);
+      }
+
+
+      .error-text {
+         color:
+            var(--danger);
+      }
+
+
+      /* ==========================================================
+         CARDS
+         ========================================================== */
+
+      .card-list {
+         display: grid;
+
+         grid-template-columns:
+            repeat(
+               2,
+               minmax(0, 1fr)
+            );
+
+         gap: 16px;
+      }
+
+
+      .member-card {
+         padding: 20px;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 12px;
+
+         transition:
+            transform .15s ease,
+            box-shadow .15s ease;
+      }
+
+
+      .member-card:hover {
+         transform:
+            translateY(-1px);
+
+         box-shadow:
+            var(--shadow-md);
+      }
+
+
+      .member-card-header {
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+
+         padding-bottom: 3px;
+      }
+
+
+      .card-label {
+         color:
+            var(--ieee-blue);
+
+         font-size: 9px;
+
+         font-weight: 800;
+
+         letter-spacing: .10em;
+      }
+
+
+      .member-id {
+         color:
+            var(--text-muted);
+
+         font-size: 11px;
+      }
+
+
+      .event-status {
+         padding:
+            4px 8px;
+
+         border-radius:
+            999px;
+
+         background:
+            var(--warning-bg);
+
+         color:
+            var(--warning);
+
+         font-size: 10px;
+
+         font-weight: 700;
+      }
+
+
+      /* ==========================================================
+         ACTIONS
+         ========================================================== */
+
+      .form-footer {
+         display: flex;
+
+         align-items: center;
+
+         justify-content: space-between;
+
+         gap: 12px;
+
+         padding-top: 5px;
+      }
+
+
+      .row-actions {
+         display: flex;
+         align-items: center;
+
+         flex-wrap: wrap;
+
+         gap: 8px;
+
+         padding-top: 4px;
+      }
+
+
+      .row-actions .muted {
+         margin-left: auto;
+      }
+
+
+      /* ==========================================================
+         CHECKBOXES
+         ========================================================== */
+
+      .checkbox-row {
+         min-height: 42px;
+
+         display: flex;
+         align-items: center;
+
+         gap: 10px;
+
+         padding:
+            9px 12px;
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-sm);
+
+         background:
+            #fafbfc;
+
+         color:
+            #344054;
+
+         font-size: 12px;
+
+         cursor: pointer;
+      }
+
+
+      .checkbox-row input {
+         width: 17px;
+         height: 17px;
+
+         accent-color:
+            var(--ieee-blue);
+
+         cursor: pointer;
+      }
+
+
+      /* ==========================================================
+         INFO BANNER
+         ========================================================== */
+
+      .info-banner {
+         display: flex;
+         align-items: center;
+
+         gap: 10px;
+
+         padding:
+            12px 15px;
+
+         border:
+            1px solid #cfe3f2;
+
+         border-radius:
+            10px;
+
+         background:
+            #f0f8fd;
+
+         color:
+            #245273;
+
+         font-size: 12px;
+
+         line-height: 1.5;
+      }
+
+
+      .info-icon {
+         width: 28px;
+         height: 28px;
+
+         flex: 0 0 28px;
+
+         display: flex;
+         align-items: center;
+         justify-content: center;
+
+         border-radius:
+            8px;
+
+         background:
+            rgba(0,98,155,.10);
+
+         font-size: 13px;
+      }
+
+
+      /* ==========================================================
+         PUBLISHING
+         ========================================================== */
+
+      .publish-card {
+         display: flex;
+
+         gap: 18px;
+
+         padding: 24px;
+
+         border:
+            1px solid #cfe3f2;
+
+         border-radius:
+            var(--radius-lg);
+
+         background:
+            linear-gradient(
+               135deg,
+               #eef8fd,
+               #ffffff
+            );
+      }
+
+
+      .publish-icon {
+         width: 50px;
+         height: 50px;
+
+         flex: 0 0 50px;
+
+         display: flex;
+         align-items: center;
+         justify-content: center;
+
+         border-radius:
+            13px;
+
+         background:
+            rgba(0,98,155,.10);
+
+         font-size: 23px;
+      }
+
+
+      .publish-card h3 {
+         margin: 0 0 7px;
+
+         color:
+            var(--ieee-navy);
+
+         font-size: 16px;
+      }
+
+
+      .publish-card p {
+         margin: 0 0 8px;
+
+         color:
+            #45627a;
+
+         font-size: 13px;
+
+         line-height: 1.65;
+      }
+
+
+      .publish-card p:last-child {
+         margin-bottom: 0;
+      }
+
+
+      .hook-section {
+         padding: 24px;
+
+         background:
+            white;
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-lg);
+
+         box-shadow:
+            var(--shadow-sm);
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 13px;
+      }
+
+
+      .publish-action {
+         padding:
+            22px 24px;
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-lg);
+
+         background:
+            white;
+
+         display: flex;
+         flex-direction: column;
+
+         gap: 10px;
+      }
+
+
+      .publish-button {
+         align-self: flex-start;
+
+         min-height: 45px;
+
+         padding:
+            10px 20px;
+      }
+
+
+      /* ==========================================================
+         STATE
+         ========================================================== */
+
+      .state-card {
+         min-height: 220px;
+
+         display: flex;
+         flex-direction: column;
+
+         align-items: center;
+         justify-content: center;
+
+         gap: 12px;
+
+         background:
+            white;
+
+         border:
+            1px solid var(--border);
+
+         border-radius:
+            var(--radius-lg);
+
+         color:
+            var(--text-soft);
+      }
+
+
+      .state-card p {
+         margin: 0;
+
+         font-size: 13px;
+      }
+
+
+      .error-state {
+         padding: 25px;
+
+         color:
+            var(--danger);
+
+         text-align: center;
+      }
+
+
+      .error-state strong {
+         font-size: 15px;
+      }
+
+
+      .error-state p {
+         max-width: 650px;
+
+         color:
+            var(--danger);
+
+         line-height: 1.6;
+      }
+
+
+      /* ==========================================================
+         TOAST
+         ========================================================== */
+
+      .toast {
+         position: fixed;
+
+         left: 50%;
+         bottom: 28px;
+
+         z-index: 1000;
+
+         max-width:
+            min(
+               500px,
+               calc(100% - 32px)
+            );
+
+         padding:
+            13px 18px;
+
+         border-radius:
+            10px;
+
+         background:
+            #101828;
+
+         color:
+            white;
+
+         font-size: 13px;
+
+         font-weight: 600;
+
+         box-shadow:
+            0 12px 30px
+            rgba(16,24,40,.22);
+
+         opacity: 0;
+
+         pointer-events: none;
+
+         transform:
+            translate(-50%, 20px);
+
+         transition:
+            opacity .2s ease,
+            transform .2s ease;
+      }
+
+
+      .toast.show {
+         opacity: 1;
+
+         transform:
+            translate(-50%, 0);
+      }
+
+
+      .toast.err {
+         background:
+            var(--danger);
+      }
+
+
+      /* ==========================================================
+         ACCESSIBILITY
+         ========================================================== */
+
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible,
+      select:focus-visible {
+         outline:
+            3px solid
+            rgba(0,98,155,.20);
+
+         outline-offset: 2px;
+      }
+
+
+      /* ==========================================================
+         TABLET
+         ========================================================== */
+
+      .form-section-title {
+         margin-top: 18px;
+         padding: 14px 0 4px;
+         border-top: 1px solid var(--border);
+         font-size: 16px;
+         font-weight: 800;
+         color: var(--ieee-navy);
+      }
+
+      .form-section-title:first-child {
+         margin-top: 0;
+         border-top: 0;
+      }
+
+      code {
+         padding: 2px 5px;
+         border-radius: 4px;
+         background: rgba(0, 98, 155, 0.08);
+         font-size: 12px;
+      }
+
+
+      @media (max-width: 900px) {
+
+         .topbar {
+            padding:
+               0 20px;
+         }
+
+
+         .dashboard-intro {
+            width:
+               calc(100% - 30px);
+
+            padding-top:
+               30px;
+         }
+
+
+         .dashboard-layout {
+            grid-template-columns: 220px minmax(0, 1fr);
+         }
+
+         .dashboard-content .dashboard-intro,
+         .panel-host {
+            width: calc(100% - 36px);
+         }
+
+
+         .card-list {
+            grid-template-columns:
+               1fr;
+         }
+
+
+      }
+
+
+      /* ==========================================================
+         MOBILE
+         ========================================================== */
+
+      @media (max-width: 600px) {
+
+         .topbar {
+            min-height:
+               auto;
+
+            padding:
+               12px 15px;
+
+            flex-direction:
+               column;
+
+            align-items:
+               stretch;
+
+            gap: 12px;
+         }
+
+
+         .brand {
+            justify-content:
+               flex-start;
+         }
+
+
+         .user-area {
+            justify-content:
+               space-between;
+         }
+
+
+         .user-info {
+            align-items:
+               flex-start;
+         }
+
+
+         .user-email {
+            max-width:
+               210px;
+         }
+
+
+         .dashboard-layout {
+            display: block;
+         }
+
+         .dashboard-sidebar {
+            position: relative;
+            top: 0;
+            height: auto;
+            max-height: 320px;
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+         }
+
+         .dashboard-content .dashboard-intro,
+         .panel-host {
+            width: calc(100% - 24px);
+         }
+
+         .tab {
+            padding: 11px 12px;
+            font-size: 12px;
+         }
+
+
+         .dashboard-intro {
+            width:
+               calc(100% - 24px);
+
+            padding:
+               25px 0 18px;
+         }
+
+
+         .dashboard-intro h1 {
+            font-size:
+               25px;
+         }
+
+
+         .panel-host {
+            width:
+               calc(100% - 20px);
+
+            padding:
+               20px 0 55px;
+         }
+
+
+         .edit-form,
+         .member-card,
+         .add-form,
+         .hook-section,
+         .publish-action {
+            padding:
+               17px;
+
+            border-radius:
+               13px;
+         }
+
+
+         .section-header h2 {
+            font-size:
+               19px;
+         }
+
+
+         .section-header p {
+            font-size:
+               12px;
+         }
+
+
+         .imgpick {
+            flex-direction:
+               column;
+
+            align-items:
+               flex-start;
+         }
+
+
+         .imgpick-preview {
+            width:
+               105px;
+
+            height:
+               105px;
+
+            flex-basis:
+               105px;
+         }
+
+
+         .imgpick-input {
+            width:
+               100%;
+
+            max-width:
+               none;
+         }
+
+
+         .form-footer {
+            flex-direction:
+               column;
+
+            align-items:
+               stretch;
+         }
+
+
+         .form-footer .btn {
+            width:
+               100%;
+         }
+
+
+         .row-actions {
+            flex-direction:
+               column;
+
+            align-items:
+               stretch;
+         }
+
+
+         .row-actions .btn {
+            width:
+               100%;
+         }
+
+
+         .row-actions .muted {
+            margin-left:
+               0;
+         }
+
+
+         .publish-card {
+            flex-direction:
+               column;
+         }
+
+
+         .publish-icon {
+            width:
+               44px;
+
+            height:
+               44px;
+
+            flex-basis:
+               44px;
+         }
+
+
+         .login-card {
+            padding:
+               28px 22px;
+         }
+
+
+         .login-card h1 {
+            font-size:
+               23px;
+         }
+      }
+
+
+      /* ==========================================================
+         REDUCED MOTION
+         ========================================================== */
+
+      @media (prefers-reduced-motion: reduce) {
+
+         *,
+         *::before,
+         *::after {
+            animation-duration:
+               .01ms !important;
+
+            animation-iteration-count:
+               1 !important;
+
+            transition-duration:
+               .01ms !important;
+
+            scroll-behavior:
+               auto !important;
+         }
+      }
+
+   </style>
+
+</body>
+</html>

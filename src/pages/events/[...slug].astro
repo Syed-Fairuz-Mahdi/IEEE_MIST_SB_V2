@@ -1,0 +1,901 @@
+```
+---
+import { render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
+import EventCard from '../../components/EventCard.astro';
+import EventRegistration from '../../components/EventRegistration.astro';
+import Newsletter from '../../components/Newsletter.astro';
+import { getAllEvents, type SiteEvent } from '../../lib/events';
+import { chapters } from '../../data/chapters';
+import { formatLongDate, isPast } from '../../utils/date';
+import { withBase } from '../../utils/paths';
+import { selectRows } from '../../lib/supabase';
+
+export const prerender = false;
+
+interface SupabaseEvent {
+    id: string;
+    slug: string;
+    title: string;
+    event_date: string;
+    chapter: string;
+    description: string;
+    body: string | null;
+    image_url: string | null;
+    location: string | null;
+    event_time: string | null;
+    registration_link: string | null;
+    registration_open: boolean | null;
+    featured: boolean | null;
+    published: boolean | null;
+    tags: string[] | null;
+}
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+    Astro.response.status = 404;
+    throw new Error('Event slug is missing.');
+}
+
+const rows = await selectRows<SupabaseEvent>('events', {
+    select: '*',
+    slug: `eq.${slug}`,
+    published: 'eq.true',
+    limit: '1',
+});
+
+const row = rows[0];
+
+if (!row) {
+    Astro.response.status = 404;
+    throw new Error(`Event "${slug}" not found.`);
+}
+
+const event = {
+    id: row.slug,
+    data: {
+        title: row.title,
+        date: new Date(`${row.event_date}T00:00:00`),
+        chapter: row.chapter,
+        description: row.description,
+        body: row.body ?? '',
+        image: row.image_url ?? undefined,
+        location: row.location ?? undefined,
+        time: row.event_time ?? undefined,
+        registrationLink: row.registration_link ?? undefined,
+        registrationOpen: Boolean(row.registration_open),
+        tags: Array.isArray(row.tags) ? row.tags : [],
+    },
+} as SiteEvent;
+
+const eventId = event.id;
+const eventSlug = event.id;
+
+// Markdown events render through Astro;
+// Supabase events carry plain-text paragraphs.
+const Content = event.entry
+    ? (await render(event.entry)).Content
+    : null;
+
+const paragraphs = (event.body ?? '')
+    .split(/\n{2,}/)
+    .map((text) => text.trim())
+    .filter(Boolean);
+
+const chapter = chapters.find(
+    (item) => item.shortName === event.data.chapter,
+);
+
+const past = isPast(event.data.date);
+
+const related = (await getAllEvents())
+    .filter(
+       (item) =>
+          item.id !== event.id &&
+          item.data.chapter === event.data.chapter,
+    )
+    .sort(
+       (a, b) =>
+          b.data.date.getTime() -
+          a.data.date.getTime(),
+    )
+    .slice(0, 3);
+---
+
+<Layout
+    title={`${event.data.title} | IEEE MIST`}
+    description={event.data.description}
+>
+    <Header />
+
+    <main data-event-page data-event-id={eventId} data-event-slug={eventSlug}>
+        <section class="event-hero">
+            <div class="hero-circuit hero-circuit-left" aria-hidden="true"></div>
+            <div class="hero-circuit hero-circuit-right" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+                <i></i><i></i><i></i><i></i>
+            </div>
+
+            <div class="container hero-inner">
+                <nav class="breadcrumbs" aria-label="Breadcrumb">
+                    <a href={withBase('/')}>Home</a>
+                    <span>/</span>
+                    <a href={withBase('/events')}>Events</a>
+                    <span>/</span>
+                    <span data-event-breadcrumb>{event.data.title}</span>
+                </nav>
+
+                <div class="hero-copy">
+                    <p class="hero-eyebrow" data-event-eyebrow>
+                        {chapter ? `${chapter.code} · ${chapter.fullName}` : 'IEEE MIST Student Branch'}
+                    </p>
+                    <h1 data-event-title>{event.data.title}</h1>
+                    <p class="hero-description" data-event-description>{event.data.description}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="detail">
+            <div class="container detail-grid">
+                <article class="content">
+                    {
+                        event.data.image && (
+                            <div class="cover" data-event-cover>
+                                <img
+                                    src={withBase(event.data.image)}
+                                    alt={event.data.title}
+                                    data-event-image
+                                />
+                            </div>
+                        )
+                    }
+
+                    <ul class="tags" data-event-tags hidden={event.data.tags.length === 0}>
+                        {event.data.tags.map((tag) => <li>{tag}</li>)}
+                    </ul>
+
+                    <div class="prose" data-event-body>
+                        {Content ? <Content /> : paragraphs.map((text) => <p class="plain">{text}</p>)}
+                    </div>
+                </article>
+
+                <aside class="sidebar">
+                    <div class="registration-card">
+                        <p class="card-title" data-event-card-title>
+                            {past ? 'Event Details' : 'Registration'}
+                        </p>
+
+                        <dl class="event-meta">
+                            <div>
+                                <dt>Date</dt>
+                                <dd data-event-date>{formatLongDate(event.data.date)}</dd>
+                            </div>
+
+                            <div data-event-time-row hidden={!event.data.time}>
+                                <dt>Time</dt>
+                                <dd data-event-time>{event.data.time}</dd>
+                            </div>
+
+                            <div data-event-location-row hidden={!event.data.location}>
+                                <dt>Venue</dt>
+                                <dd data-event-location>{event.data.location}</dd>
+                            </div>
+
+                            <div>
+                                <dt>Organised by</dt>
+                                <dd data-event-organiser>
+                                    {chapter ? chapter.fullName : 'IEEE MIST Student Branch'}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <div data-event-registration>
+                            {
+                                past ? (
+                                    <p class="closed">This event has already taken place.</p>
+                                ) : event.data.registrationOpen ? (
+                                    <>
+                                        <EventRegistration slug={event.id} />
+                                        {event.data.registrationLink && (
+                                            <p class="alt">
+                                                Prefer an external form?{' '}
+                                                <a
+                                                    href={event.data.registrationLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    Register there instead
+                                                </a>
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p class="closed">Registration for this event is closed.</p>
+                                )
+                            }
+                        </div>
+                    </div>
+
+                    {
+                        chapter && (
+                            <a
+                                class="chapter-card"
+                                href={withBase(`/chapters/${chapter.slug}`)}
+                                style={`--accent:${chapter.accent}`}
+                            >
+                                <span class="card-logo">
+                                    <img src={chapter.logoWhite} alt="" loading="lazy" />
+                                </span>
+                                <span class="card-text">
+                                    <strong>{chapter.code}</strong>
+                                    <span>{chapter.fullName}</span>
+                                </span>
+                            </a>
+                        )
+                    }
+
+                    <a class="back" href={withBase('/events')}>← Back to all events</a>
+                </aside>
+            </div>
+        </section>
+
+        {
+            related.length > 0 && (
+                <section class="related">
+                    <div class="container">
+                        <div class="section-heading">
+                            <p>EXPLORE MORE</p>
+                            <h2>More from {chapter ? chapter.code : 'the branch'}</h2>
+                        </div>
+
+                        <div class="event-grid">
+                            {related.map((item) => (
+                                <EventCard
+                                    title={item.data.title}
+                                    date={item.data.date}
+                                    chapter={item.data.chapter}
+                                    description={item.data.description}
+                                    image={item.data.image}
+                                    location={item.data.location}
+                                    href={withBase(`/events/${item.id}`)}
+                                    past={isPast(item.data.date)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )
+        }
+
+        <Newsletter />
+    </main>
+
+    <Footer />
+</Layout>
+
+<script>
+    import { supabase } from '../../lib/supabase-browser';
+
+    interface SupabaseEvent {
+        id: string;
+        slug: string;
+        title: string;
+        event_date: string;
+        chapter: string;
+        description: string;
+        body: string | null;
+        image_url: string | null;
+        location: string | null;
+        event_time: string | null;
+        registration_link: string | null;
+        registration_open: boolean | null;
+        featured: boolean | null;
+        published: boolean | null;
+        tags: string[] | null;
+    }
+
+    const page = document.querySelector<HTMLElement>('[data-event-page]');
+
+    if (page) {
+        const eventSlug = page.dataset.eventSlug || page.dataset.eventId;
+
+        if (eventSlug) {
+            function formatEventDate(value: string): string {
+                const date = new Date(`${value}T00:00:00Z`);
+                if (Number.isNaN(date.getTime())) return value;
+
+                return new Intl.DateTimeFormat('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    timeZone: 'UTC',
+                }).format(date);
+            }
+
+            function isPastEvent(value: string): boolean {
+                const date = new Date(`${value}T23:59:59`);
+                return date.getTime() < Date.now();
+            }
+
+            function setText(selector: string, value: string | null | undefined) {
+                const element = page.querySelector<HTMLElement>(selector);
+                if (element) element.textContent = value ?? '';
+            }
+
+            function renderBody(body: string | null) {
+                const container = page.querySelector<HTMLElement>('[data-event-body]');
+                if (!container) return;
+
+                container.replaceChildren();
+
+                if (!body) {
+                    const p = document.createElement('p');
+                    p.className = 'plain';
+                    p.textContent = 'Event details will be announced soon.';
+                    container.appendChild(p);
+                    return;
+                }
+
+                const blocks = body
+                    .split(/\n{2,}/)
+                    .map((block) => block.trim())
+                    .filter(Boolean);
+
+                for (const block of blocks) {
+                    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+
+                    if (lines.every((line) => line.startsWith('- ') || line.startsWith('* '))) {
+                        const ul = document.createElement('ul');
+                        for (const line of lines) {
+                            const li = document.createElement('li');
+                            li.textContent = line.replace(/^[-*]\s+/, '');
+                            ul.appendChild(li);
+                        }
+                        container.appendChild(ul);
+                    } else if (block.startsWith('### ')) {
+                        const h3 = document.createElement('h3');
+                        h3.textContent = block.replace(/^###\s+/, '');
+                        container.appendChild(h3);
+                    } else if (block.startsWith('## ')) {
+                        const h2 = document.createElement('h2');
+                        h2.textContent = block.replace(/^##\s+/, '');
+                        container.appendChild(h2);
+                    } else {
+                        const p = document.createElement('p');
+                        p.className = 'plain';
+                        p.textContent = block;
+                        container.appendChild(p);
+                    }
+                }
+            }
+
+            function updateRegistration(row: SupabaseEvent) {
+                const registration = page.querySelector<HTMLElement>('[data-event-registration]');
+                const cardTitle = page.querySelector<HTMLElement>('[data-event-card-title]');
+                if (!registration) return;
+
+                const past = isPastEvent(row.event_date);
+
+                if (past) {
+                    if (cardTitle) cardTitle.textContent = 'Event Details';
+                    registration.innerHTML =
+                        '<p class="closed">This event has already taken place.</p>';
+                    return;
+                }
+
+                if (cardTitle) cardTitle.textContent = 'Registration';
+
+                if (row.registration_open) {
+                    if (row.registration_link) {
+                        registration.innerHTML = `
+                            <a class="live-register-button"
+                               href="${row.registration_link}"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                Register now
+                            </a>
+                            <p class="alt">Registration is currently open.</p>
+                        `;
+                    } else {
+                        registration.innerHTML =
+                            '<p class="registration-live">Registration is open. Please use the registration form.</p>';
+                    }
+                } else {
+                    registration.innerHTML =
+                        '<p class="closed">Registration for this event is closed.</p>';
+                }
+            }
+
+            function updateEventPage(row: SupabaseEvent) {
+                setText('[data-event-title]', row.title);
+                setText('[data-event-breadcrumb]', row.title);
+                setText('[data-event-description]', row.description);
+                setText('[data-event-date]', formatEventDate(row.event_date));
+                setText('[data-event-time]', row.event_time);
+                setText('[data-event-location]', row.location);
+
+                document.title = `${row.title} | IEEE MIST`;
+
+                const timeRow = page.querySelector<HTMLElement>('[data-event-time-row]');
+                const locationRow = page.querySelector<HTMLElement>('[data-event-location-row]');
+                if (timeRow) timeRow.hidden = !row.event_time;
+                if (locationRow) locationRow.hidden = !row.location;
+
+                const cover = page.querySelector<HTMLElement>('[data-event-cover]');
+                const image = page.querySelector<HTMLImageElement>('[data-event-image]');
+
+                if (row.image_url) {
+                    if (image) {
+                        image.src = row.image_url;
+                        image.alt = row.title;
+                    }
+                    if (cover) cover.hidden = false;
+                } else if (cover) {
+                    cover.hidden = true;
+                }
+
+                const tags = page.querySelector<HTMLElement>('[data-event-tags]');
+                if (tags) {
+                    tags.replaceChildren();
+                    const list = Array.isArray(row.tags) ? row.tags : [];
+                    tags.hidden = list.length === 0;
+
+                    for (const tag of list) {
+                        const li = document.createElement('li');
+                        li.textContent = tag;
+                        tags.appendChild(li);
+                    }
+                }
+
+                renderBody(row.body);
+                updateRegistration(row);
+            }
+
+            async function loadLatestEvent() {
+                const { data, error } = await supabase
+                    .from('events')
+                    .select('*')
+                    .eq('slug', eventSlug)
+                    .single();
+
+                if (error) {
+                    console.error('Failed to load latest event from Supabase:', error);
+                    console.error('Event slug used:', eventSlug);
+                    return;
+                }
+
+                if (data) updateEventPage(data as SupabaseEvent);
+            }
+
+            loadLatestEvent();
+
+            const channel = supabase
+                .channel(`event-live-${eventSlug}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'events',
+                    },
+                    (payload) => {
+                        const row = (payload.new || payload.old) as Partial<SupabaseEvent>;
+
+                        // The public URL uses the event slug, not the database UUID/id.
+                        if (row?.slug !== eventSlug) return;
+
+                        if (
+                            payload.eventType === 'INSERT' ||
+                            payload.eventType === 'UPDATE'
+                        ) {
+                            updateEventPage(payload.new as SupabaseEvent);
+                        }
+
+                        if (payload.eventType === 'DELETE') {
+                            console.warn(`Event ${eventSlug} was deleted.`);
+                        }
+                    },
+                )
+                .subscribe((status) => {
+                    console.log(`Event Realtime status for ${eventSlug}: ${status}`);
+                });
+
+            window.addEventListener('beforeunload', () => {
+                supabase.removeChannel(channel);
+            });
+        }
+    }
+</script>
+
+<style>
+    .event-hero {
+        position: relative;
+        min-height: 315px;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 88% 30%, rgba(39,126,181,.24), transparent 28%),
+            linear-gradient(120deg, #07527f 0%, #064477 55%, #073c6b 100%);
+        color: #fff;
+    }
+
+    .hero-inner {
+        position: relative;
+        z-index: 2;
+        padding-top: 46px;
+        padding-bottom: 48px;
+    }
+
+    .breadcrumbs {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 28px;
+        font-size: 12px;
+        color: rgba(255,255,255,.68);
+    }
+
+    .breadcrumbs a {
+        color: rgba(255,255,255,.8);
+        text-decoration: none;
+    }
+
+    .breadcrumbs a:hover { color: #fff; }
+
+    .hero-copy { max-width: 720px; }
+
+    .hero-eyebrow {
+        margin: 0 0 12px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.68);
+    }
+
+    .hero-copy h1 {
+        margin: 0 0 14px;
+        font-size: clamp(34px, 4vw, 52px);
+        line-height: 1.05;
+        letter-spacing: -1.5px;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    .hero-description {
+        max-width: 650px;
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.65;
+        color: rgba(255,255,255,.76);
+    }
+
+    .hero-circuit {
+        position: absolute;
+        pointer-events: none;
+        opacity: .42;
+    }
+
+    .hero-circuit-right {
+        right: -20px;
+        top: 54px;
+        width: 360px;
+        height: 180px;
+        background:
+            linear-gradient(90deg, transparent 0 15%, rgba(161,211,239,.45) 15% 15.5%, transparent 15.5% 100%),
+            linear-gradient(180deg, transparent 0 30%, rgba(161,211,239,.35) 30% 31%, transparent 31% 100%);
+        clip-path: polygon(
+            0 18%, 28% 18%, 38% 34%, 100% 34%, 100% 38%, 41% 38%,
+            31% 23%, 0 23%, 0 57%, 36% 57%, 45% 68%, 100% 68%,
+            100% 72%, 43% 72%, 34% 61%, 0 61%
+        );
+    }
+
+    .hero-circuit-left {
+        left: -40px;
+        bottom: -20px;
+        width: 230px;
+        height: 130px;
+        opacity: .28;
+        border: 1px solid rgba(161,211,239,.25);
+        border-radius: 50%;
+        box-shadow:
+            80px -5px 0 -45px rgba(161,211,239,.35),
+            140px 20px 0 -58px rgba(161,211,239,.35);
+    }
+
+    .hero-circuit span,
+    .hero-circuit i {
+        position: absolute;
+        display: block;
+        width: 7px;
+        height: 7px;
+        border: 1px solid rgba(190,225,244,.75);
+        border-radius: 50%;
+    }
+
+    .hero-circuit span:nth-child(1) { left: 22%; top: 18%; }
+    .hero-circuit span:nth-child(2) { left: 48%; top: 35%; }
+    .hero-circuit span:nth-child(3) { left: 72%; top: 68%; }
+    .hero-circuit span:nth-child(4) { right: 10%; top: 34%; }
+    .hero-circuit i:nth-child(5) { left: 31%; top: 57%; }
+    .hero-circuit i:nth-child(6) { left: 61%; top: 35%; }
+    .hero-circuit i:nth-child(7) { right: 22%; top: 71%; }
+    .hero-circuit i:nth-child(8) { left: 84%; top: 55%; }
+
+    .detail {
+        padding: 46px 0 78px;
+        background: #fff;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0,1.7fr) minmax(310px,.95fr);
+        gap: 36px;
+        align-items: start;
+    }
+
+    .cover {
+        overflow: hidden;
+        margin-bottom: 18px;
+        border-radius: 13px;
+        background: #eef3f6;
+    }
+
+    .cover img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+    }
+
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        list-style: none;
+        margin: 0 0 22px;
+        padding: 0;
+    }
+
+    .tags li {
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: #f2f5f7;
+        color: #647383;
+        font-size: 11px;
+    }
+
+    .prose { max-width: 760px; }
+
+    .prose :global(h2) {
+        margin: 30px 0 11px;
+        color: #07375f;
+        font-size: 23px;
+        line-height: 1.25;
+        font-weight: 750;
+    }
+
+    .prose :global(h2:first-child) { margin-top: 0; }
+
+    .prose :global(h3) {
+        margin: 25px 0 9px;
+        color: #07375f;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .prose :global(p) {
+        margin: 0 0 15px;
+        color: #536273;
+        font-size: 14px;
+        line-height: 1.75;
+    }
+
+    .prose :global(ul),
+    .prose :global(ol) {
+        margin: 0 0 18px;
+        padding-left: 21px;
+        color: #536273;
+    }
+
+    .prose :global(li) {
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .prose :global(a) {
+        color: #0671ad;
+        text-decoration: underline;
+    }
+
+    .plain { white-space: pre-line; }
+
+    .sidebar {
+        position: sticky;
+        top: 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .registration-card {
+        padding: 21px;
+        border: 1px solid #e2e5e8;
+        border-radius: 15px;
+        background: #f5f5f5;
+        box-shadow: 0 2px 10px rgba(15,42,61,.04);
+    }
+
+    .card-title {
+        margin: 0 0 17px;
+        color: #0872ac;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    .event-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+        margin: 0 0 18px;
+    }
+
+    .event-meta dt {
+        margin: 0 0 3px;
+        color: #7b858d;
+        font-size: 8px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .event-meta dd {
+        margin: 0;
+        color: #07375f;
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 650;
+    }
+
+    .closed {
+        margin: 0;
+        color: #687580;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .registration-live {
+        margin: 0;
+        color: #0872ac;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .live-register-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: #0872ac;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .alt {
+        margin: 10px 0 0;
+        color: #7b858d;
+        font-size: 10px;
+        line-height: 1.55;
+    }
+
+    .alt a {
+        color: #0872ac;
+        text-decoration: underline;
+    }
+
+    .chapter-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #e4e8eb;
+        border-radius: 13px;
+        background: #fff;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .card-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        padding: 8px;
+        flex-shrink: 0;
+        border-radius: 9px;
+        background: linear-gradient(140deg, #07375f 0%, var(--accent) 210%);
+    }
+
+    .card-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .card-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        color: #687580;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    .card-text strong {
+        color: #07375f;
+        font-size: 13px;
+    }
+
+    .back {
+        color: #0872ac;
+        font-size: 11px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .related {
+        padding: 65px 0;
+        background: #f5f7f9;
+    }
+
+    .section-heading { margin-bottom: 28px; }
+
+    .section-heading p {
+        margin: 0 0 6px;
+        color: #0872ac;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 2px;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: #07375f;
+        font-size: 28px;
+    }
+
+    .event-grid {
+        display: grid;
+        grid-template-columns: repeat(3,minmax(0,1fr));
+        gap: 22px;
+    }
+
+    @media (max-width: 900px) {
+        .detail-grid { grid-template-columns: 1fr; }
+        .sidebar { position: static; }
+        .event-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+
+    @media (max-width: 620px) {
+        .event-hero { min-height: 290px; }
+        .hero-inner { padding-top: 32px; padding-bottom: 38px; }
+        .hero-copy h1 { font-size: 34px; }
+        .hero-description { font-size: 14px; }
+        .detail { padding: 30px 0 52px; }
+        .event-grid { grid-template-columns: 1fr; }
+        .hero-circuit-right { right: -140px; opacity: .25; }
+    }
+</style>
+
+```

@@ -1,0 +1,270 @@
+---
+import { withBase } from '../utils/paths';
+import { chapterHeroPattern, chapterHeroPhoto } from '../data/chapterAvatars';
+import type { HeroHeadline } from '../data/chapterCopy';
+
+interface Props {
+	slug: string;
+	code: string;
+	fullName: string;
+	title?: string;
+	headline?: HeroHeadline;
+	badge?: string;
+	subtitle: string;
+	accent: string;
+	accent2?: string;
+	logo: string;
+	exploreLabel?: string;
+	eventsLabel?: string;
+	variant?: 'dark' | 'light';
+}
+
+const {
+	slug,
+	code,
+	fullName,
+	title,
+	headline,
+	badge,
+	subtitle,
+	accent,
+	accent2 = accent,
+	logo,
+	exploreLabel = 'Explore Our Impact',
+	eventsLabel = 'Upcoming Events',
+	variant = 'dark',
+} = Astro.props;
+
+const patternExt = chapterHeroPattern[slug];
+const pattern = patternExt ? withBase(`images/chapters/${slug}/bg-pattern.${patternExt}`) : null;
+const photo = chapterHeroPhoto[slug] ? withBase(chapterHeroPhoto[slug]) : null;
+---
+
+<section class="chapter-hero" class:list={[variant]} style={`--accent:${accent}; --accent2:${accent2}`}>
+	<div class="bg-layer">
+		{photo && <img src={photo} alt="" class="photo" />}
+		{pattern && <img src={pattern} alt="" class="pattern" />}
+	</div>
+	<div class="overlay"></div>
+
+	<div class="container content">
+		<img src={logo} alt={`${code} logo`} class="logo" />
+		{badge && <span class="badge">{badge}</span>}
+		<h1>
+			{
+				title
+					? title
+					: headline
+						? (
+							<>
+								{headline.before}
+								{headline.before && ' '}
+								<span class="highlight">{headline.highlight}</span>
+								{headline.after && ' '}
+								{headline.after}
+							</>
+						)
+						: fullName
+			}
+		</h1>
+		<p class="subtitle">{subtitle}</p>
+		<div class="actions">
+			<a href="#about" class="btn btn-primary">{exploreLabel}</a>
+			<a href="#events" class="btn btn-outline">{eventsLabel}</a>
+		</div>
+	</div>
+</section>
+
+<style>
+	.chapter-hero {
+		position: relative;
+		display: flex;
+		align-items: center;
+		min-height: 600px;
+		overflow: hidden;
+		background: var(--color-navy);
+		padding: 80px 0;
+	}
+
+	.chapter-hero.light {
+		background: var(--color-bg);
+	}
+
+	.bg-layer {
+		position: absolute;
+		inset: 0;
+	}
+
+	.photo,
+	.pattern {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.pattern {
+		opacity: 0.2;
+	}
+
+	.dark .photo {
+		opacity: 0.5;
+	}
+
+	.light .photo {
+		opacity: 0.35;
+		mix-blend-mode: multiply;
+	}
+
+	.overlay {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-navy) 90%, transparent) 0%,
+			color-mix(in srgb, var(--accent2) 80%, transparent) 100%
+		);
+	}
+
+	.light .overlay {
+		background: linear-gradient(to bottom, color-mix(in srgb, var(--color-navy) 85%, transparent) 0%, var(--color-bg) 100%);
+	}
+
+	.content {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		width: 100%;
+	}
+
+	.logo {
+		height: 96px;
+		width: auto;
+		max-width: 300px;
+		object-fit: contain;
+		margin-bottom: 16px;
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 16px;
+		margin-bottom: 16px;
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.dark .badge {
+		background: rgba(255, 255, 255, 0.15);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+
+	.light .badge {
+		background: var(--color-navy);
+		color: #fff;
+	}
+
+	h1 {
+		max-width: 768px;
+		font-size: 48px;
+		font-weight: 700;
+		line-height: 56px;
+		letter-spacing: -0.02em;
+		color: #fff;
+		margin-bottom: 16px;
+	}
+
+	.light h1 {
+		color: var(--color-navy);
+	}
+
+	.highlight {
+		color: var(--accent2);
+	}
+
+	.light .highlight {
+		color: var(--accent);
+	}
+
+	.subtitle {
+		max-width: 640px;
+		font-size: 18px;
+		line-height: 28px;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 32px;
+	}
+
+	.light .subtitle {
+		color: var(--color-text-secondary);
+	}
+
+	.actions {
+		display: flex;
+		gap: 16px;
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 16px 32px;
+		border-radius: 4px;
+		font-size: 14px;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		transition: all 0.25s ease;
+	}
+
+	.btn-primary {
+		background: var(--accent);
+		color: #fff;
+	}
+
+	.btn-primary:hover {
+		background: var(--accent2);
+	}
+
+	.btn-outline {
+		border: 1px solid #fff;
+		color: #fff;
+	}
+
+	.dark .btn-outline:hover {
+		background: #fff;
+		color: var(--color-navy);
+	}
+
+	.light .btn-outline {
+		border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+		background: rgba(255, 255, 255, 0.8);
+		color: var(--accent);
+	}
+
+	.light .btn-outline:hover {
+		background: #fff;
+	}
+
+	@media (min-width: 768px) {
+		h1 {
+			font-size: 64px;
+			line-height: 1.1;
+		}
+	}
+
+	@media (max-width: 640px) {
+		h1 {
+			font-size: 34px;
+			line-height: 1.2;
+		}
+		.actions {
+			flex-direction: column;
+			width: 100%;
+		}
+	}
+</style>

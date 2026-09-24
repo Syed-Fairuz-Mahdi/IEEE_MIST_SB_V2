@@ -1,0 +1,682 @@
+```
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import HeroCircuitPattern from '../components/HeroCircuitPattern.astro';
+import { withBase } from '../utils/paths';
+import { selectRows } from '../lib/supabase';
+
+/**
+ * Structure follows the Figma "Contact Us - IEEE MIST Student Branch" frame
+ * (node 31:2622): Hero -> [Contact Form | Contact Information & Map] -> FAQ.
+ */
+
+const fallbackSubjects = [
+    'General Inquiry',
+    'Membership',
+    'Event or workshop',
+    'Collaboration / sponsorship',
+    'Chapter enquiry',
+];
+
+const fallbackSocials = [
+    { label: 'Facebook', href: 'https://www.facebook.com' },
+    { label: 'LinkedIn', href: 'https://www.linkedin.com' },
+    { label: 'Instagram', href: 'https://www.instagram.com' },
+    { label: 'YouTube', href: 'https://www.youtube.com' },
+];
+
+const fallbackFaqs = [
+    {
+       question: 'Who can join the IEEE MIST Student Branch?',
+       answer: 'Placeholder — describe eligibility: which departments, which years, and whether an IEEE membership number is required first.',
+    },
+    {
+       question: 'How much does membership cost?',
+       answer: 'Placeholder — state the current IEEE student membership fee and any branch fee.',
+    },
+    {
+       question: 'Can I join more than one chapter?',
+       answer: 'Placeholder — explain whether members can hold membership in multiple chapters.',
+    },
+    {
+       question: 'How do I propose an event or collaboration?',
+       answer: 'Placeholder — describe the process and expected notice period for proposing an event with the branch.',
+    },
+];
+
+type ContactPage = {
+    id: string;
+    hero_title: string;
+    hero_description: string;
+    address_lines: string[];
+    email: string;
+    office_hours: string;
+    map_image_url: string | null;
+    socials: { label: string; href: string }[];
+    subjects: string[];
+    faqs: { question: string; answer: string }[];
+};
+
+const rows = await selectRows<ContactPage>('contact_page', {
+    select: '*',
+    id: 'eq.main',
+    limit: '1',
+});
+
+const dbContact = rows[0];
+
+const contactPage: ContactPage = {
+    id: 'main',
+    hero_title: dbContact?.hero_title || 'Connect with IEEE MIST',
+    hero_description:
+       dbContact?.hero_description ||
+       'Questions about membership, an event, or a collaboration? Send us a message and the right person on the committee will get back to you.',
+    address_lines:
+       Array.isArray(dbContact?.address_lines) && dbContact.address_lines.length
+          ? dbContact.address_lines
+          : [
+                'IEEE MIST Student Branch',
+                'Military Institute of Science and Technology',
+                'Mirpur Cantonment, Dhaka-1216, Bangladesh',
+             ],
+    email: dbContact?.email || 'ieeemistsb@mist.ac.bd',
+    office_hours:
+       dbContact?.office_hours || 'Sunday — Thursday, 10:00 AM to 4:00 PM',
+    map_image_url:
+       dbContact?.map_image_url || withBase('images/home/map-location.png'),
+    socials:
+       Array.isArray(dbContact?.socials) && dbContact.socials.length
+          ? dbContact.socials
+          : fallbackSocials,
+    subjects:
+       Array.isArray(dbContact?.subjects) && dbContact.subjects.length
+          ? dbContact.subjects
+          : fallbackSubjects,
+    faqs:
+       Array.isArray(dbContact?.faqs) && dbContact.faqs.length
+          ? dbContact.faqs
+          : fallbackFaqs,
+};
+---
+
+<Layout
+    title="Contact | IEEE MIST Student Branch"
+    description="Connect with the IEEE MIST Student Branch — membership, collaborations, event proposals, and general enquiries."
+>
+    <Header />
+    <main>
+       <section class="hero">
+          <HeroCircuitPattern />
+          <div class="container hero-inner">
+             <h1 data-contact="hero_title">{contactPage.hero_title}</h1>
+             <p data-contact="hero_description">{contactPage.hero_description}</p>
+          </div>
+       </section>
+
+       <section class="main-grid-section">
+          <div class="container main-grid">
+             <div class="form-card">
+                <h2>Send us a message</h2>
+
+                <form class="contact-form" data-contact-form>
+                   <label>
+                      <span>Full name</span>
+                      <input type="text" name="name" required maxlength="120" autocomplete="name" placeholder="John Doe" />
+                   </label>
+
+                   <label>
+                      <span>Email address</span>
+                      <input
+                         type="email"
+                         name="email"
+                         required
+                         maxlength="254"
+                         autocomplete="email"
+                         placeholder="john@example.com"
+                      />
+                   </label>
+
+                   <label>
+                      <span>Subject</span>
+                      <select name="subject" data-contact="subjects">
+                         {contactPage.subjects.map((subject) => <option value={subject}>{subject}</option>)}
+                      </select>
+                   </label>
+
+                   <label>
+                      <span>Message</span>
+                      <textarea
+                         name="message"
+                         rows="6"
+                         required
+                         maxlength="5000"
+                         placeholder="How can we help you today?"
+                      ></textarea>
+                   </label>
+
+                   <!-- Honeypot: hidden from people, irresistible to bots. -->
+                   <div class="hp" aria-hidden="true">
+                      <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+                   </div>
+
+                   <button type="submit" class="btn">Send message</button>
+                   <p class="status" data-status role="status" aria-live="polite"></p>
+                </form>
+             </div>
+
+             <aside class="info-card">
+                <h2>Contact Information</h2>
+
+                <dl class="info-list">
+                   <div>
+                      <dt>Address</dt>
+                      <dd data-contact="address">{contactPage.address_lines.map((line) => <>{line}<br /></>)}</dd>
+                   </div>
+                   <div>
+                      <dt>Email</dt>
+                      <dd><a data-contact="email" href={`mailto:${contactPage.email}`}>{contactPage.email}</a></dd>
+                   </div>
+                   <div>
+                      <dt>Office hours</dt>
+                      <dd data-contact="office_hours">{contactPage.office_hours}</dd>
+                   </div>
+                </dl>
+
+                <div class="map">
+                   <img
+                      src={contactPage.map_image_url || withBase('images/home/map-location.png')}
+                      data-contact="map" alt="Map showing the IEEE MIST location"
+                      loading="lazy"
+                   />
+                </div>
+
+                <p class="follow-label">Follow our updates</p>
+                <div class="socials" data-contact="socials">
+                   {
+                      contactPage.socials.map((social) => (
+                         <a href={social.href} target="_blank" rel="noopener noreferrer">
+                            {social.label}
+                         </a>
+                      ))
+                   }
+                </div>
+             </aside>
+          </div>
+       </section>
+
+       <section class="faq">
+          <div class="container">
+             <h2>Frequently Asked Questions</h2>
+             <span class="rule"></span>
+             <div class="faq-list" data-contact="faqs">
+                {
+                   contactPage.faqs.map((faq) => (
+                      <details>
+                         <summary>{faq.question}</summary>
+                         <p>{faq.answer}</p>
+                      </details>
+                   ))
+                }
+             </div>
+          </div>
+       </section>
+    </main>
+    <Footer />
+</Layout>
+
+<script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const SUPABASE_URL =
+       import.meta.env.PUBLIC_SUPABASE_URL ||
+       'https://czxhvlqhfqhovuslglpe.supabase.co';
+
+    const SUPABASE_KEY =
+       import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+       'sb_publishable__C3FKDsT53MA-0siZYUbKw_Q26ZkV_H';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const form = document.querySelector<HTMLFormElement>('form[data-contact-form]');
+    const status = form?.querySelector<HTMLElement>('[data-status]');
+    const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+    function setStatus(message: string, state: 'pending' | 'success' | 'error') {
+       if (!status) return;
+       status.textContent = message;
+       status.dataset.state = state;
+    }
+
+    form?.addEventListener('submit', async (event) => {
+       event.preventDefault();
+
+       if (!form) return;
+
+       const data = new FormData(form);
+       const name = String(data.get('name') || '').trim();
+       const email = String(data.get('email') || '').trim();
+       const subject = String(data.get('subject') || '').trim();
+       const message = String(data.get('message') || '').trim();
+       const website = String(data.get('website') || '').trim();
+
+       if (website) {
+          setStatus('Thanks — your message has been received.', 'success');
+          form.reset();
+          return;
+       }
+
+       if (!name || !email || !message) {
+          setStatus('Please complete the required fields.', 'error');
+          return;
+       }
+
+       submit?.setAttribute('disabled', 'true');
+       setStatus('Sending your message...', 'pending');
+
+       // Keep the public form insert minimal so it only depends on the
+       // four core columns used by the contact form.
+       const { error } = await supabase
+          .from('contact_messages')
+          .insert({
+             name,
+             email,
+             subject: subject || 'General Inquiry',
+             message,
+          });
+
+       submit?.removeAttribute('disabled');
+
+       if (error) {
+          console.error('Contact form error:', {
+             message: error?.message,
+             details: error?.details,
+             hint: error?.hint,
+             code: error?.code,
+             status: error?.status,
+          });
+          setStatus('We could not send your message. Please try again.', 'error');
+          return;
+       }
+
+       form.reset();
+       setStatus('Message sent successfully. We will get back to you soon.', 'success');
+    });
+
+    // Keep the public Contact page in sync with dashboard edits.
+    supabase
+       .channel('contact-page-live')
+       .on(
+          'postgres_changes',
+          {
+             event: '*',
+             schema: 'public',
+             table: 'contact_page'
+          },
+          (payload) => {
+             if (payload.eventType === 'DELETE' || payload.new?.id !== 'main') return;
+
+             const row = payload.new as any;
+
+             const title = document.querySelector<HTMLElement>('[data-contact="hero_title"]');
+             const description = document.querySelector<HTMLElement>('[data-contact="hero_description"]');
+             const emailLink = document.querySelector<HTMLAnchorElement>('[data-contact="email"]');
+             const officeHours = document.querySelector<HTMLElement>('[data-contact="office_hours"]');
+             const address = document.querySelector<HTMLElement>('[data-contact="address"]');
+             const map = document.querySelector<HTMLImageElement>('[data-contact="map"]');
+             const socialsHost = document.querySelector<HTMLElement>('[data-contact="socials"]');
+             const subjectsHost = document.querySelector<HTMLSelectElement>('[data-contact="subjects"]');
+             const faqsHost = document.querySelector<HTMLElement>('[data-contact="faqs"]');
+
+             if (title) title.textContent = row.hero_title || '';
+             if (description) description.textContent = row.hero_description || '';
+
+             if (emailLink) {
+                emailLink.textContent = row.email || '';
+                emailLink.href = `mailto:${row.email || ''}`;
+             }
+
+             if (officeHours) officeHours.textContent = row.office_hours || '';
+
+             if (address) {
+                address.replaceChildren();
+                for (const line of Array.isArray(row.address_lines) ? row.address_lines : []) {
+                   address.append(document.createTextNode(line));
+                   address.append(document.createElement('br'));
+                }
+             }
+
+             if (map && row.map_image_url) map.src = row.map_image_url;
+
+             if (socialsHost) {
+                socialsHost.replaceChildren();
+                for (const social of Array.isArray(row.socials) ? row.socials : []) {
+                   const link = document.createElement('a');
+                   link.href = social.href || '#';
+                   link.target = '_blank';
+                   link.rel = 'noopener noreferrer';
+                   link.textContent = social.label || '';
+                   socialsHost.append(link);
+                }
+             }
+
+             if (subjectsHost) {
+                const current = subjectsHost.value;
+                subjectsHost.replaceChildren();
+                for (const subject of Array.isArray(row.subjects) ? row.subjects : []) {
+                   const option = document.createElement('option');
+                   option.value = subject;
+                   option.textContent = subject;
+                   subjectsHost.append(option);
+                }
+                subjectsHost.value = current;
+             }
+
+             if (faqsHost) {
+                faqsHost.replaceChildren();
+                for (const faq of Array.isArray(row.faqs) ? row.faqs : []) {
+                   const details = document.createElement('details');
+                   const summary = document.createElement('summary');
+                   const answer = document.createElement('p');
+                   summary.textContent = faq.question || '';
+                   answer.textContent = faq.answer || '';
+                   details.append(summary, answer);
+                   faqsHost.append(details);
+                }
+             }
+          }
+       )
+       .subscribe((status) => {
+          console.log('Contact Realtime status:', status);
+       });
+
+</script>
+
+<style>
+    .hero {
+       position: relative;
+       background: linear-gradient(135deg, var(--color-navy) 0%, #013a72 55%, var(--color-blue) 160%);
+       padding: 72px 0;
+       overflow: hidden;
+    }
+
+    .hero-inner {
+       position: relative;
+    }
+
+    .hero h1 {
+       font-size: 44px;
+       font-weight: 700;
+       letter-spacing: -0.88px;
+       color: #fff;
+       margin-bottom: 16px;
+    }
+
+    .hero p {
+       max-width: 660px;
+       font-size: 18px;
+       line-height: 1.6;
+       color: rgba(255, 255, 255, 0.8);
+    }
+
+    .main-grid-section {
+       padding: 72px 0;
+    }
+
+    .main-grid {
+       display: grid;
+       grid-template-columns: 1.35fr 1fr;
+       gap: 32px;
+       align-items: start;
+    }
+
+    h2 {
+       font-size: 26px;
+       font-weight: 600;
+       color: var(--color-navy);
+    }
+
+    .form-card,
+    .info-card {
+       padding: 36px;
+       border: 1px solid var(--color-border);
+       border-radius: 4px;
+       background: #fff;
+    }
+
+    .info-card {
+       background: #f4f4f4;
+    }
+
+    .contact-form {
+       margin-top: 28px;
+       display: flex;
+       flex-direction: column;
+       gap: 20px;
+    }
+
+    .hp {
+       position: absolute;
+       left: -9999px;
+       width: 1px;
+       height: 1px;
+       overflow: hidden;
+    }
+
+    label {
+       display: flex;
+       flex-direction: column;
+       gap: 8px;
+    }
+
+    label span {
+       font-size: 11px;
+       font-weight: 800;
+       letter-spacing: 1px;
+       text-transform: uppercase;
+       color: var(--color-text-muted);
+    }
+
+    input,
+    select,
+    textarea {
+       padding: 14px 16px;
+       border: 1px solid var(--color-border);
+       border-radius: 4px;
+       background: #fff;
+       font-size: 15px;
+       font-family: var(--font-sans);
+       color: var(--color-text);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+       outline: 2px solid rgba(0, 98, 155, 0.3);
+       border-color: var(--color-blue);
+    }
+
+    textarea {
+       resize: vertical;
+    }
+
+    .btn {
+       align-self: flex-start;
+       padding: 15px 34px;
+       border: none;
+       border-radius: 4px;
+       background: var(--color-blue);
+       color: #fff;
+       font-size: 15px;
+       font-weight: 600;
+       cursor: pointer;
+    }
+
+    .btn:disabled {
+       opacity: 0.6;
+       cursor: progress;
+    }
+
+    .status {
+       margin: 0;
+       font-size: 15px;
+       line-height: 1.5;
+    }
+
+    .status:empty {
+       display: none;
+    }
+
+    .status[data-state='pending'] {
+       color: var(--color-text-muted);
+    }
+
+    .status[data-state='success'] {
+       color: #1a7f46;
+    }
+
+    .status[data-state='error'] {
+       color: #b3261e;
+    }
+
+    .info-list {
+       margin: 24px 0 28px;
+       display: flex;
+       flex-direction: column;
+       gap: 20px;
+    }
+
+    .info-list dt {
+       font-size: 11px;
+       font-weight: 800;
+       letter-spacing: 1px;
+       text-transform: uppercase;
+       color: var(--color-text-muted);
+       margin-bottom: 6px;
+    }
+
+    .info-list dd {
+       margin: 0;
+       font-size: 15px;
+       line-height: 1.65;
+       color: var(--color-text-secondary);
+    }
+
+    .info-list a {
+       color: var(--color-blue);
+    }
+
+    .info-list a:hover {
+       text-decoration: underline;
+    }
+
+    .map {
+       border: 1px solid var(--color-border);
+       border-radius: 4px;
+       overflow: hidden;
+       margin-bottom: 28px;
+    }
+
+    .map img {
+       width: 100%;
+    }
+
+    .follow-label {
+       font-size: 11px;
+       font-weight: 800;
+       letter-spacing: 1px;
+       text-transform: uppercase;
+       color: var(--color-text-muted);
+       margin-bottom: 14px;
+    }
+
+    .socials {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 10px;
+    }
+
+    .socials a {
+       padding: 8px 16px;
+       border: 1px solid var(--color-border);
+       border-radius: 999px;
+       background: #fff;
+       font-size: 14px;
+       color: var(--color-text-secondary);
+    }
+
+    .socials a:hover {
+       border-color: var(--color-blue);
+       color: var(--color-blue);
+    }
+
+    .faq {
+       background: #f4f4f4;
+       padding: 80px 0 96px;
+    }
+
+    .rule {
+       display: block;
+       width: 64px;
+       height: 4px;
+       margin: 16px 0 40px;
+       background: var(--color-blue);
+    }
+
+    .faq-list {
+       display: flex;
+       flex-direction: column;
+       gap: 12px;
+       max-width: 900px;
+    }
+
+    details {
+       border: 1px solid var(--color-border);
+       border-radius: 4px;
+       background: #fff;
+       overflow: hidden;
+    }
+
+    summary {
+       padding: 18px 22px;
+       font-size: 16px;
+       font-weight: 600;
+       color: var(--color-navy);
+       cursor: pointer;
+       list-style: none;
+    }
+
+    summary::-webkit-details-marker {
+       display: none;
+    }
+
+    summary::after {
+       content: '+';
+       float: right;
+       font-size: 20px;
+       font-weight: 400;
+       line-height: 1;
+       color: var(--color-blue);
+    }
+
+    details[open] summary::after {
+       content: '\2212';
+    }
+
+    details p {
+       padding: 0 22px 20px;
+       font-size: 15px;
+       line-height: 1.75;
+       color: var(--color-text-secondary);
+    }
+
+    @media (max-width: 900px) {
+       .main-grid {
+          grid-template-columns: 1fr;
+       }
+       .hero h1 {
+          font-size: 32px;
+       }
+    }
+</style>

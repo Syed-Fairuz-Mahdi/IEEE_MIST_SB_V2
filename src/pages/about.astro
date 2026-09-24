@@ -1,0 +1,868 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import HeroCircuitPattern from '../components/HeroCircuitPattern.astro';
+import { getExecutiveCommittee, getAssociateCommittee } from '../lib/content';
+import { selectRows } from '../lib/supabase';
+import { supabase } from '../lib/supabase-browser';
+import { withBase } from '../utils/paths';
+
+export const prerender = false;
+
+type AboutStat = { value: string; label: string };
+type AboutJourney = { year?: string; title: string; description: string };
+type AboutProgram = { title: string; description: string; href?: string; icon?: string };
+type AboutContributor = { name: string; role?: string; avatar?: string };
+type AboutPage = {
+ id: string; hero_title: string; hero_description: string; stats: AboutStat[]; story: string[];
+ chair_name: string; chair_role: string; chair_image_url?: string | null; chair_message: string[];
+ journey: AboutJourney[]; mission: string; mission_source: string; vision: string;
+ programs: AboutProgram[]; contributors: AboutContributor[];
+ cta_heading: string; cta_description: string; cta_button: string; cta_link: string;
+};
+
+const executiveCommittee = await getExecutiveCommittee();
+const associateCommittee = await getAssociateCommittee();
+
+/**
+ * Content sourced from IEEE_MIST_SB_Website_Content.md, supplied directly by the user:
+ * "The Story of IEEE MIST SB" and "Message from the Chair" (Munawar Arif Nitol), both
+ * used close to verbatim. Real stats (members, associate directors, coordinators,
+ * chapters) come from that same source.
+ *
+ * The mockup's "Our Journey" timeline, Mission/Vision, and "Our Contributors" sections
+ * were fabricated (invented year-by-year milestones with specific member counts, generic
+ * Mission/Vision copy, six fake generic contributor names) with nothing to source them
+ * from. Per the site owner, kept as real sections but re-grounded: Journey only states
+ * milestones the source doc actually gives (no invented specific counts for the
+ * undated ones); Mission is the Chair's own quoted words, Vision is closely paraphrased
+ * from the Story text; Contributors is the people who built this site — Nazifa Tasnim
+ * (developer) and Md. Abidur Rahman, plus two more from the Associate Directors roster.
+ */
+
+const fallbackStats = [
+	{ value: '100+', label: 'Active Members' },
+	{ value: '5', label: 'Technical Chapters' },
+	{ value: '42', label: 'Associate Directors' },
+	{ value: '26', label: 'Excomm Members' },
+];
+
+const fallbackChair = executiveCommittee.find((member) => member.role === 'Chair');
+
+const fallbackStory = [
+	'On 5 May 2015, IEEE MIST Student Branch opened its doors with just six members, marked by a small inauguration ceremony. No grand plan beyond that, just a handful of students who believed engineering education at MIST deserved something beyond the classroom. That belief turned out to be contagious.',
+	'Today, the branch runs on the energy of over a hundred members organized across three levels. Forty-two Coordinators handle the ground work. Forty-two Associate Directors guide execution. Twenty-six Excomm members steer the direction. What started as six people with an idea is now a structure built to last, and to keep growing.',
+	'IEEE MIST SB has also grown into something larger than a single branch. It now stands as the parent organization for five specialized chapters at MIST: Women in Engineering (WIE), Antennas and Propagation Society (APS), Electron Devices Society (EDS), Signal Processing Society (SPS), and Microwave Theory and Techniques Society (MTT-S). Each one carries forward the same spirit the founding six started with, just pointed at a different corner of engineering.',
+	"If there is one thing IEEE MIST SB has always been known for, it is the International Conference on Electrical Engineering and Information & Communication Technology, ICEEICT. Hosted by the Department of EECE at MIST, with IEEE MIST SB playing a key role in organizing it, this conference has become the branch's signature event, the one that consistently put IEEE MIST SB on the map, year after year. The branch is now gearing up for its 7th edition, continuing a tradition that has brought researchers, academics, and industry voices to MIST from around the world.",
+	"Beyond the conference, the branch has kept its members sharp through hands-on learning. Workshops like Pixel Pulse for graphic design, SolidWorks for modeling, and a MATLAB crash course have given students practical skills they don't always get in a lecture hall. Seminars run alongside these workshops nearly every year, quietly building a culture where members don't just attend IEEE MIST SB, they grow through it.",
+	'Eleven years on, the branch that began with six members now shapes the experience of over a hundred, and stands as one of the most recognized student organizations at MIST.',
+];
+
+const fallbackChairMessage = [
+	"I took on the role of Chair at IEEE MIST SB knowing exactly what I was inheriting: a branch already in excellent shape, built patiently by the chairs before me. My job isn't to fix something broken. It's to take something strong and push it further.",
+	'My goal, plainly, is this: every member of IEEE MIST SB should walk away having reached a little closer to their full potential. Not just attended events, but actually grown from them.',
+	"To get there, we're expanding what the branch offers. Technical webinars are becoming a regular fixture, not an occasional add-on. We're bringing in international speakers and running alumni sessions, giving current members direct access to people who've already walked the path they're on. All of this comes together under our flagship webinar series, IEEE Elevate, which is exactly what it sounds like: a platform built to elevate our members, one session at a time.",
+	"We're also introducing something new: the very first Ideathon that IEEE MIST SB has ever organized. It's a competition open to students across MIST, built around tackling real, complex problems facing Bangladesh's engineering sector. As an engineering institute, MIST is exactly the kind of place where ideas like these should be tested, challenged, and pushed toward something usable.",
+	"On the chapter front, we're not stopping at five. Plans are already in motion to open IEEE Computer Society, IEEE EMBS, IEEE NPSS, IEEE RAS, and IEEE IAS student branches at MIST, giving even more students a specialized home within IEEE.",
+	'And for our conference, ICEEICT, the goal is simple: I want it to be a name nobody forgets. Alongside the core conference, we\'re planning to host a Three Minute Thesis competition, a poster presentation, and a national idea competition, giving students more ways to showcase their work on a stage that already draws attention from across the region.',
+	'None of this happens in isolation. I remain deeply grateful to our Chief Patron, Brigadier General K M Mustafizur Rahman, psc, and our counselor, Lt Col Md Aminul Islam, PhD, EME, for their continuous guidance. Their support gives this branch the direction it needs to keep moving forward.',
+	'IEEE MIST SB is in a strong place today because of the people who led it before me. My job now is to take that foundation and elevate it, one member, one event, one idea at a time.',
+];
+
+const fallbackJourney = [
+	{
+		year: '2015',
+		title: 'The Inception',
+		description:
+			'IEEE MIST Student Branch opened its doors on 5 May 2015 with just six members, marked by a small inauguration ceremony.',
+	},
+	{
+		title: 'Building the Structure',
+		description:
+			'The branch grew into a three-tier structure of Coordinators, Associate Directors, and Excomm members — now running on the energy of over a hundred members.',
+	},
+	{
+		title: 'Five Specialized Chapters',
+		description:
+			'IEEE MIST SB became the parent organization for five chapters — WIE, APS, EDS, SPS, and MTT-S — each carrying the founding spirit into a different corner of engineering.',
+	},
+	{
+		title: 'ICEEICT, Our Signature Event',
+		description:
+			"The International Conference on Electrical Engineering and Information & Communication Technology became the branch's signature event, now heading into its 7th edition.",
+	},
+	{
+		year: '2026',
+		title: 'Eleven Years On',
+		description:
+			'The branch that began with six members now shapes the experience of over a hundred, and stands as one of the most recognized student organizations at MIST.',
+	},
+];
+
+const fallbackMission =
+	'Every member of IEEE MIST SB should walk away having reached a little closer to their full potential — not just attended events, but actually grown from them.';
+
+const fallbackVision =
+	"To grow from a six-member idea into a lasting structure — now the parent organization of five specialized chapters — that gives every engineering student at MIST a home to grow through, not just attend.";
+
+const nazifa = {
+	name: 'Nazifa Tasnim',
+	role: 'Executive Committee, Webmaster WIE and APS',
+	avatar: withBase('images/chapters/wie/exec/nazifa-tasnim-face.jpg'),
+};
+
+const abidur = associateCommittee.find((member) => member.name === 'Md. Abidur Rahman');
+const mrittika = {
+	name: 'Mrittika Joya',
+	role: '',
+};
+const fallbackContributors = [nazifa, abidur, mrittika].filter(Boolean) as AboutContributor[];
+
+const fallbackPrograms = [
+	{
+		title: 'ICEEICT',
+		description:
+			"Our signature conference, hosted by the EECE department with IEEE MIST SB at the center of organizing it. Now heading into its 7th edition, bringing researchers, academics, and industry voices to MIST from around the world.",
+		href: 'https://iceeict.mist.ac.bd/',
+		icon: 'conference',
+	},
+	{
+		title: 'IEEE Elevate',
+		description:
+			'Our flagship webinar series — technical webinars, international speakers, and alumni sessions, giving members direct access to people who\'ve already walked the path they\'re on.',
+		icon: 'webinar',
+	},
+	{
+		title: 'The Ideathon',
+		description:
+			"IEEE MIST SB's first-ever Ideathon: a competition open to students across MIST, built around tackling real, complex problems facing Bangladesh's engineering sector.",
+		icon: 'idea',
+	},
+	{
+		title: 'Hands-On Workshops',
+		description:
+			'Practical skills sessions like Pixel Pulse (graphic design), SolidWorks (modeling), and a MATLAB crash course — the kind of skills members don\'t always get in a lecture hall.',
+		icon: 'workshop',
+	},
+];
+
+const programIcons: Record<string, string> = {
+	conference:
+		'<path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/><path d="M8 21h8"/>',
+	webinar:
+		'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M10 8.5l6 3-6 3v-6z"/>',
+	idea:
+		'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.3 3.6 2.3 4.6.8.8 1.2 1.4 1.2 2.4h5c0-1 .4-1.6 1.2-2.4C16.7 12.6 18 11.2 18 9a6 6 0 0 0-6-6z"/>',
+	workshop:
+		'<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.3-2.3 2.1-2.1z"/>',
+};
+
+const aboutRows = await selectRows<AboutPage>('about_page', { select: '*', id: 'eq.main', limit: '1' });
+const dbAbout = aboutRows[0];
+const about: AboutPage = {
+ id: 'main',
+ hero_title: dbAbout?.hero_title || 'Advancing Technology for the Betterment of Humanity',
+ hero_description: dbAbout?.hero_description || 'The IEEE MIST Student Branch is a hub of technical innovation and professional growth at the Military Institute of Science and Technology. We bridge the gap between academic theory and industry practice.',
+ stats: Array.isArray(dbAbout?.stats) && dbAbout.stats.length ? dbAbout.stats : fallbackStats,
+ story: Array.isArray(dbAbout?.story) && dbAbout.story.length ? dbAbout.story : fallbackStory,
+ chair_name: dbAbout?.chair_name || fallbackChair?.name || 'Munawar Arif Nitol',
+ chair_role: dbAbout?.chair_role || 'Chair, IEEE MIST Student Branch',
+ chair_image_url: dbAbout?.chair_image_url || fallbackChair?.avatar || null,
+ chair_message: Array.isArray(dbAbout?.chair_message) && dbAbout.chair_message.length ? dbAbout.chair_message : fallbackChairMessage,
+ journey: Array.isArray(dbAbout?.journey) && dbAbout.journey.length ? dbAbout.journey : fallbackJourney,
+ mission: dbAbout?.mission || fallbackMission,
+ mission_source: dbAbout?.mission_source || 'Munawar Arif Nitol, Chair',
+ vision: dbAbout?.vision || fallbackVision,
+ programs: Array.isArray(dbAbout?.programs) && dbAbout.programs.length ? dbAbout.programs : fallbackPrograms,
+ contributors: Array.isArray(dbAbout?.contributors) && dbAbout.contributors.length ? dbAbout.contributors : fallbackContributors,
+ cta_heading: dbAbout?.cta_heading || 'Become part of IEEE MIST',
+ cta_description: dbAbout?.cta_description || 'Join a community of engineers building technical skill, leadership, and a professional network that reaches well beyond campus.',
+ cta_button: dbAbout?.cta_button || 'Get in touch',
+ cta_link: dbAbout?.cta_link || '/contact',
+};
+---
+
+<Layout
+	title="About | IEEE MIST Student Branch"
+	description="The story of IEEE MIST Student Branch — from six founding members in 2015 to the parent organization of five specialized technical chapters."
+>
+	<Header />
+	<main>
+		<section class="hero">
+			<div class="hero-gradient"></div>
+			<HeroCircuitPattern />
+			<div class="container hero-inner">
+				<h1 data-about="hero_title">{about.hero_title}</h1>
+				<p data-about="hero_description">{about.hero_description}</p>
+			</div>
+		</section>
+
+		<section class="stats-section">
+			<div class="container stats">
+				{
+					about.stats.map((stat) => (
+						<div class="stat">
+							<p class="value" data-about-stat-value>{stat.value}</p>
+							<p class="label" data-about-stat-label>{stat.label}</p>
+						</div>
+					))
+				}
+			</div>
+		</section>
+
+		<section class="story-section" id="story">
+			<div class="container story-inner">
+				<h2>The Story of IEEE MIST SB</h2>
+				<span class="rule"></span>
+				<div class="prose">
+					{about.story.map((paragraph) => <p>{paragraph}</p>)}
+				</div>
+			</div>
+		</section>
+
+		<section class="chair-message" id="chair">
+			<div class="container chair-inner">
+				<div class="chair-photo-col">
+					<div class="chair-photo">
+						{
+							about.chair_image_url ? (
+								<img src={about.chair_image_url} alt={about.chair_name} data-about-chair-image />
+							) : (
+								<img src={withBase('images/home/icon-person.svg')} alt="" class="icon" data-about-chair-image />
+							)
+						}
+					</div>
+					<div class="chair-caption">
+						<span class="divider"></span>
+						<p class="name" data-about="chair_name">{about.chair_name}</p>
+						<p class="role" data-about="chair_role">{about.chair_role}</p>
+					</div>
+				</div>
+				<div class="chair-text">
+					<h2>Message from the Chair</h2>
+					<span class="rule"></span>
+					<div class="prose">
+						{about.chair_message.map((paragraph) => <p>{paragraph}</p>)}
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="journey">
+			<div class="container">
+				<h2>Our Journey</h2>
+				<span class="rule"></span>
+				<ol class="timeline">
+					{
+						about.journey.map((item) => (
+							<li>
+								<span class="marker" />
+								<div>
+									{item.year && <p class="year">{item.year}</p>}
+									<p class="milestone-title">{item.title}</p>
+									<p class="desc">{item.description}</p>
+								</div>
+							</li>
+						))
+					}
+				</ol>
+			</div>
+		</section>
+
+		<section class="mv" id="mission">
+			<div class="container mv-grid">
+				<div class="mv-card">
+					<h2>Our Mission</h2>
+					<p data-about="mission">{about.mission}</p>
+					<p class="mv-source" data-about="mission_source">— {about.mission_source}</p>
+				</div>
+				<div class="mv-card">
+					<h2>Our Vision</h2>
+					<p data-about="vision">{about.vision}</p>
+				</div>
+			</div>
+		</section>
+
+		<section class="programs">
+			<div class="container">
+				<h2>What We Run</h2>
+				<span class="rule"></span>
+				<div class="program-grid">
+					{
+						about.programs.map((program) => {
+							const Tag = program.href ? 'a' : 'div';
+							const linkProps = program.href
+								? { href: program.href, target: '_blank', rel: 'noopener noreferrer' }
+								: {};
+							return (
+								<Tag class="program-card" {...linkProps}>
+									<div class="program-icon">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" set:html={programIcons[program.icon]} />
+									</div>
+									<h3>
+										{program.title}
+										{program.href && (
+											<span class="external" aria-hidden="true">
+												↗
+											</span>
+										)}
+									</h3>
+									<p>{program.description}</p>
+								</Tag>
+							);
+						})
+					}
+				</div>
+			</div>
+		</section>
+
+		<section class="contributors">
+			<div class="container">
+				<h2>Our Contributors</h2>
+				<span class="rule"></span>
+				<p class="lede">The people behind this website.</p>
+				<div class="contributor-grid">
+					{
+						about.contributors.map((person) => (
+							<div class="contributor">
+								<div class="avatar">
+									{person.avatar ? (
+										<img src={person.avatar} alt={person.name} loading="lazy" />
+									) : (
+										<img src={withBase('images/home/icon-person.svg')} alt="" class="icon" loading="lazy" />
+									)}
+								</div>
+								<p class="c-name">{person.name}</p>
+								<div class="c-roles">
+									{
+										person.role && person.role.split(', ').map((line) => (
+											<p class="c-role">{line}</p>
+										))
+									}
+								</div>
+							</div>
+						))
+					}
+				</div>
+			</div>
+		</section>
+
+		<section class="cta">
+			<div class="container cta-inner">
+				<h2 data-about="cta_heading">{about.cta_heading}</h2>
+				<p data-about="cta_description">{about.cta_description}</p>
+				<a class="btn" href={withBase(about.cta_link)} data-about="cta_button">{about.cta_button}</a>
+			</div>
+		</section>
+	</main>
+	<Footer />
+</Layout>
+
+<script define:vars={{ about }}>
+	import { supabase } from '../lib/supabase-browser';
+
+	const initialAbout = about;
+	const fallbackPersonIcon = '/images/home/icon-person.svg';
+	const programIcons = {
+		conference: '<path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/><path d="M8 21h8"/>',
+		webinar: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M10 8.5l6 3-6 3v-6z"/>',
+		idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.3 3.6 2.3 4.6.8.8 1.2 1.4 1.2 2.4h5c0-1 .4-1.6 1.2-2.4C16.7 12.6 18 11.2 18 9a6 6 0 0 0-6-6z"/>',
+		workshop: '<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0-5.4-5.4l-2.1 2.1-2.3-2.3 2.1-2.1z"/>'
+	};
+	function text(sel,v){const n=document.querySelector(sel);if(n)n.textContent=v??'';}
+	function paragraphs(sel,items){const h=document.querySelector(sel),t=h?.querySelector(':scope > p');if(!h||!t)return;h.replaceChildren();for(const x of items||[]){const n=t.cloneNode(false);n.textContent=x;h.append(n);}}
+	function stats(items){const h=document.querySelector('.stats'),t=h?.firstElementChild;if(!h||!t)return;h.replaceChildren();for(const x of items||[]){const n=t.cloneNode(true);n.querySelector('[data-about-stat-value]').textContent=x.value??'';n.querySelector('[data-about-stat-label]').textContent=x.label??'';h.append(n);}}
+	function journey(items){const h=document.querySelector('.timeline'),t=h?.firstElementChild;if(!h||!t)return;h.replaceChildren();for(const x of items||[]){const n=t.cloneNode(true),y=n.querySelector('.year');if(y){y.textContent=x.year||'';y.hidden=!x.year;}n.querySelector('.milestone-title').textContent=x.title??'';n.querySelector('.desc').textContent=x.description??'';h.append(n);}}
+	function programs(items){const h=document.querySelector('.program-grid'),t=h?.firstElementChild;if(!h||!t)return;h.replaceChildren();for(const x of items||[]){const n=t.cloneNode(true),icon=n.querySelector('svg'),title=n.querySelector('h3'),desc=n.querySelector('p');if(icon)icon.innerHTML=programIcons[x.icon]||'';title.textContent=x.title??'';if(x.href){const e=document.createElement('span');e.className='external';e.setAttribute('aria-hidden','true');e.textContent='↗';title.append(e);n.href=x.href;n.target='_blank';n.rel='noopener noreferrer';}else{n.removeAttribute('href');n.removeAttribute('target');n.removeAttribute('rel');}desc.textContent=x.description??'';h.append(n);}}
+	function contributors(items){const h=document.querySelector('.contributor-grid'),t=h?.firstElementChild;if(!h||!t)return;h.replaceChildren();for(const x of items||[]){const n=t.cloneNode(true),img=n.querySelector('.avatar img'),name=n.querySelector('.c-name'),roles=n.querySelector('.c-roles');img.src=x.avatar||fallbackPersonIcon;img.alt=x.avatar?(x.name||''):'';img.classList.toggle('icon',!x.avatar);name.textContent=x.name??'';roles.replaceChildren();for(const r of String(x.role||'').split(', ').filter(Boolean)){const p=document.createElement('p');p.className='c-role';p.textContent=r;roles.append(p);}h.append(n);}}
+	function apply(a){text('[data-about="hero_title"]',a.hero_title);text('[data-about="hero_description"]',a.hero_description);text('[data-about="chair_name"]',a.chair_name);text('[data-about="chair_role"]',a.chair_role);text('[data-about="mission"]',a.mission);text('[data-about="mission_source"]',`— ${a.mission_source||''}`);text('[data-about="vision"]',a.vision);text('[data-about="cta_heading"]',a.cta_heading);text('[data-about="cta_description"]',a.cta_description);const c=document.querySelector('[data-about="cta_button"]');if(c){c.textContent=a.cta_button||'';c.href=a.cta_link||'/contact';}const im=document.querySelector('[data-about-chair-image]');if(im){im.src=a.chair_image_url||fallbackPersonIcon;im.alt=a.chair_image_url?(a.chair_name||''):'';im.classList.toggle('icon',!a.chair_image_url);}stats(a.stats);paragraphs('.story-section .prose',a.story);paragraphs('.chair-text .prose',a.chair_message);journey(a.journey);programs(a.programs);contributors(a.contributors);}
+	apply(about);
+	supabase.channel('about-page-live').on('postgres_changes',{event:'*',schema:'public',table:'about_page'},payload=>{if(payload.eventType!=='DELETE'&&payload.new?.id==='main')apply(payload.new);}).subscribe(status=>console.log('About Realtime status:',status));
+</script>
+
+<style>
+	.hero {
+		position: relative;
+		background: linear-gradient(135deg, var(--color-navy) 0%, #013a72 55%, var(--color-blue) 160%);
+		padding: 112px 0;
+		overflow: hidden;
+	}
+
+	.hero-gradient {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(135deg, rgba(0, 98, 155, 0.55) 0%, rgba(0, 40, 85, 0) 60%);
+	}
+
+	.hero-inner {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.hero h1 {
+		max-width: 900px;
+		font-size: 48px;
+		font-weight: 700;
+		line-height: 1.16;
+		letter-spacing: -0.96px;
+		color: #fff;
+	}
+
+	.hero p {
+		max-width: 760px;
+		font-size: 18px;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.8);
+	}
+
+	.stats-section {
+		background: #f4f4f4;
+		border-bottom: 1px solid var(--color-border);
+		padding: 48px 0;
+	}
+
+	.stats {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 24px;
+		text-align: center;
+	}
+
+	.stat .value {
+		font-size: 36px;
+		font-weight: 700;
+		letter-spacing: -1px;
+		color: var(--color-blue);
+	}
+
+	.stat .label {
+		margin-top: 6px;
+		font-size: 12px;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--color-text-muted);
+	}
+
+	h2 {
+		font-size: 32px;
+		font-weight: 600;
+		line-height: 1.25;
+		color: var(--color-navy);
+	}
+
+	.rule {
+		display: block;
+		width: 64px;
+		height: 4px;
+		margin-top: 16px;
+		background: var(--color-blue);
+	}
+
+	.story-section {
+		padding: 88px 0;
+	}
+
+	.prose {
+		max-width: 960px;
+	}
+
+	.prose p {
+		margin-top: 20px;
+		font-size: 16px;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+	}
+
+	.prose p:first-child {
+		margin-top: 32px;
+	}
+
+	.journey {
+		background: #f4f4f4;
+		padding: 88px 0;
+	}
+
+	.timeline {
+		list-style: none;
+		position: relative;
+		margin: 48px 0 0;
+		padding: 0 0 0 40px;
+		max-width: 860px;
+	}
+
+	.timeline::before {
+		content: '';
+		position: absolute;
+		left: 7px;
+		top: 8px;
+		bottom: 8px;
+		width: 2px;
+		background: linear-gradient(to bottom, var(--color-blue), rgba(0, 98, 155, 0.15));
+	}
+
+	.timeline li {
+		position: relative;
+		padding-bottom: 36px;
+	}
+
+	.timeline li:last-child {
+		padding-bottom: 0;
+	}
+
+	.marker {
+		position: absolute;
+		left: -40px;
+		top: 4px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #fff;
+		border: 3px solid var(--color-blue);
+	}
+
+	.timeline .year {
+		font-size: 14px;
+		font-weight: 800;
+		letter-spacing: 1px;
+		color: var(--color-blue);
+		margin-bottom: 4px;
+	}
+
+	.timeline .milestone-title {
+		font-size: 20px;
+		font-weight: 700;
+		color: var(--color-navy);
+		margin-bottom: 8px;
+	}
+
+	.timeline .desc {
+		font-size: 16px;
+		line-height: 1.65;
+		color: var(--color-text-secondary);
+	}
+
+	.mv {
+		padding: 88px 0;
+		scroll-margin-top: 100px;
+	}
+
+	.mv-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 32px;
+	}
+
+	.mv-card {
+		padding: 36px;
+		background: #f4f4f4;
+		border-bottom: 2px solid var(--color-blue);
+		border-radius: 4px;
+	}
+
+	.mv-card p {
+		margin-top: 20px;
+		font-size: 16px;
+		line-height: 1.7;
+		color: var(--color-text-secondary);
+	}
+
+	.mv-source {
+		margin-top: 12px !important;
+		font-size: 13px !important;
+		font-weight: 700;
+		font-style: italic;
+		color: var(--color-blue) !important;
+	}
+
+	.contributors {
+		background: #f4f4f4;
+		padding: 88px 0;
+		text-align: center;
+	}
+
+	.contributors .rule {
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.contributors .lede {
+		max-width: 560px;
+		margin: 16px auto 0;
+		font-size: 16px;
+		color: var(--color-text-secondary);
+	}
+
+	.contributor-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 32px;
+		margin-top: 48px;
+	}
+
+	.contributor {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.contributor .avatar {
+		width: 88px;
+		height: 88px;
+		border-radius: 50%;
+		overflow: hidden;
+		background: #fff;
+		border: 1px solid var(--color-border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.contributor .avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.contributor .avatar img.icon {
+		width: 32px;
+		height: 32px;
+		object-fit: contain;
+		opacity: 0.35;
+	}
+
+	.contributor .c-name {
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--color-navy);
+	}
+
+	.c-roles {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.contributor .c-role {
+		font-size: 13px;
+		color: var(--color-text-muted);
+	}
+
+	.programs {
+		background: #f4f4f4;
+		padding: 88px 0;
+	}
+
+	.program-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 24px;
+		margin-top: 48px;
+	}
+
+	.program-card {
+		display: block;
+		position: relative;
+		padding: 32px 28px 28px;
+		background: #fff;
+		border: 1px solid var(--color-border);
+		border-top: 3px solid var(--color-blue);
+		border-radius: 8px;
+		color: inherit;
+		text-decoration: none;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+	}
+
+	a.program-card:hover {
+		transform: translateY(-4px);
+		border-color: var(--color-blue);
+		box-shadow: 0 20px 25px -5px rgba(0, 40, 85, 0.15), 0 8px 10px -6px rgba(0, 40, 85, 0.1);
+	}
+
+	.program-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		margin-bottom: 16px;
+		border-radius: 8px;
+		background: rgba(0, 98, 155, 0.08);
+		color: var(--color-blue);
+	}
+
+	.program-icon svg {
+		width: 22px;
+		height: 22px;
+	}
+
+	.program-card h3 {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 18px;
+		font-weight: 700;
+		color: var(--color-navy);
+		margin-bottom: 12px;
+	}
+
+	.program-card .external {
+		font-size: 14px;
+		color: var(--color-blue);
+	}
+
+	.program-card p {
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--color-text-secondary);
+	}
+
+	.chair-message {
+		padding: 88px 0;
+	}
+
+	.chair-inner {
+		display: grid;
+		grid-template-columns: 280px 1fr;
+		gap: 56px;
+		align-items: start;
+	}
+
+	.chair-photo-col {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		margin-top: 24px;
+	}
+
+	.chair-photo {
+		aspect-ratio: 1;
+		border-radius: 8px;
+		overflow: hidden;
+		background: #f4f4f4;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.chair-photo img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.chair-photo img.icon {
+		width: 64px;
+		height: 64px;
+		object-fit: contain;
+		opacity: 0.3;
+	}
+
+	.chair-caption {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		text-align: center;
+	}
+
+	.chair-caption .divider {
+		width: 40px;
+		height: 2px;
+		background: rgba(0, 98, 155, 0.3);
+	}
+
+	.chair-caption .name {
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--color-navy);
+	}
+
+	.chair-caption .role {
+		font-size: 12px;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--color-blue);
+	}
+
+	.cta {
+		background: var(--color-navy);
+		padding: 72px 0;
+	}
+
+	.cta-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 20px;
+		text-align: center;
+	}
+
+	.cta h2 {
+		color: #fff;
+	}
+
+	.cta p {
+		max-width: 640px;
+		font-size: 16px;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.75);
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-top: 8px;
+		padding: 15px 32px;
+		border-radius: 8px;
+		background: var(--color-blue);
+		color: #fff;
+		font-size: 15px;
+		font-weight: 600;
+	}
+
+	@media (max-width: 1024px) {
+		.program-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+		.contributor-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	@media (max-width: 860px) {
+		.hero {
+			padding: 72px 0;
+		}
+		.hero h1 {
+			font-size: 34px;
+		}
+		.stats {
+			grid-template-columns: repeat(2, 1fr);
+		}
+		.chair-inner {
+			grid-template-columns: 1fr;
+		}
+		.chair-photo-col {
+			max-width: 240px;
+		}
+		.mv-grid {
+			grid-template-columns: 1fr;
+		}
+		.contributor-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (max-width: 560px) {
+		.program-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+

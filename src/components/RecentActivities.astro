@@ -1,0 +1,1135 @@
+---
+import { getAllEvents } from '../lib/events';
+import { formatBadgeDate } from '../utils/date';
+import { withBase } from '../utils/paths';
+
+/*
+ * Initial server-side data.
+ *
+ * This is only used while the page is loading.
+ * Once the browser starts, Supabase becomes the live source.
+ */
+const initialEvents = (await getAllEvents())
+	.sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+	.slice(0, 3)
+	.map((event) => ({
+		month: formatBadgeDate(event.data.date).month,
+		day: formatBadgeDate(event.data.date).day,
+		title: event.data.title,
+		description: event.data.description,
+		href: withBase(`/events/${event.id}`),
+	}));
+
+/*
+ * Static fallback slides.
+ *
+ * These are only displayed briefly if Supabase has not loaded yet.
+ * Once live events are fetched, they are replaced automatically.
+ */
+const fallbackSlides = [
+	{
+		image: withBase('images/home/event-techfest.png'),
+		alt: 'TechFest',
+		tag: 'ACTIVITY',
+		title: 'IEEE MIST Student Branch',
+		description:
+			'Explore our latest technical activities, workshops, seminars, and student initiatives.',
+		date: '',
+		href: withBase('/events'),
+	},
+	{
+		image: withBase('images/home/event-design-thinking.png'),
+		alt: 'Design Thinking workshop',
+		tag: 'WORKSHOP',
+		title: 'Innovations in Robotics',
+		description:
+			'Bridge the gap between theory and practice with our hands-on robotics automation seminar.',
+		date: 'November 05, 2024',
+		href: withBase('/events'),
+	},
+];
+---
+
+<section class="activities">
+	<div class="container">
+		<div class="head">
+			<h2>Recent Activities</h2>
+			<span class="underline"></span>
+		</div>
+
+		<div class="layout">
+
+			<!-- =====================================================
+			     FEATURED EVENT SLIDER
+			     ===================================================== -->
+
+			<div class="slider" data-slider>
+
+				<div
+					class="track"
+					data-track
+					style="transform: translateX(0%)"
+				>
+					{
+						fallbackSlides.map((slide) => (
+							<div class="slide">
+								<img
+									src={slide.image}
+									alt={slide.alt}
+								/>
+
+								<div class="gradient"></div>
+
+								<div class="slide-content">
+
+									{slide.tag && (
+										<span class="badge">
+											{slide.tag}
+										</span>
+									)}
+
+									<h3>
+										{slide.title}
+									</h3>
+
+									<p>
+										{slide.description}
+									</p>
+
+									<div class="meta">
+
+										{slide.date && (
+											<span class="date">
+												<img
+													src={withBase(
+														'images/home/icon-calendar.svg',
+													)}
+													alt=""
+												/>
+												{slide.date}
+											</span>
+										)}
+
+										<a
+											href={slide.href}
+											class="btn-register"
+										>
+											View Events
+										</a>
+
+									</div>
+								</div>
+							</div>
+						))
+					}
+				</div>
+
+				<button
+					class="nav-btn prev"
+					data-prev
+					aria-label="Previous slide"
+				>
+					<img
+						src={withBase(
+							'images/home/icon-chevron-left.svg',
+						)}
+						alt=""
+					/>
+				</button>
+
+				<button
+					class="nav-btn next"
+					data-next
+					aria-label="Next slide"
+				>
+					<img
+						src={withBase(
+							'images/home/icon-chevron-right.svg',
+						)}
+						alt=""
+					/>
+				</button>
+
+				<div class="dots" data-dots>
+					{
+						fallbackSlides.map((_, i) => (
+							<span
+								class:list={[
+									'dot',
+									{ active: i === 0 },
+								]}
+								data-dot={i}
+							/>
+						))
+					}
+				</div>
+
+			</div>
+
+			<!-- =====================================================
+			     RECENT EVENT LIST
+			     ===================================================== -->
+
+			<div class="event-list" data-event-list>
+
+				{
+					initialEvents.map((event) => (
+						<a
+							class="event-card"
+							href={event.href}
+						>
+							<div class="date-badge">
+								<span class="month">
+									{event.month}
+								</span>
+
+								<span class="day">
+									{event.day}
+								</span>
+							</div>
+
+							<div>
+								<p class="title">
+									{event.title}
+								</p>
+
+								<p class="desc">
+									{event.description}
+								</p>
+							</div>
+						</a>
+					))
+				}
+
+				<a
+					href={withBase('/events')}
+					class="browse-btn"
+				>
+					Browse All Past Events
+				</a>
+
+			</div>
+
+		</div>
+	</div>
+</section>
+
+
+<script>
+	import { supabase } from '../lib/supabase-browser';
+
+	/* ============================================================
+	   TYPES
+	   ============================================================ */
+
+	interface SupabaseEvent {
+		id: string;
+		slug: string;
+		title: string;
+		event_date: string;
+		chapter: string;
+		description: string;
+		body: string | null;
+		image_url: string | null;
+		location: string | null;
+		event_time: string | null;
+		registration_link: string | null;
+		registration_open: boolean | null;
+		featured: boolean | null;
+		published: boolean | null;
+		tags: string[] | null;
+	}
+
+	/* ============================================================
+	   ELEMENTS
+	   ============================================================ */
+
+	const slider =
+		document.querySelector<HTMLElement>(
+			'[data-slider]',
+		);
+
+	const track =
+		slider?.querySelector<HTMLElement>(
+			'[data-track]',
+		);
+
+	const eventList =
+		document.querySelector<HTMLElement>(
+			'[data-event-list]',
+		);
+
+	const prevButton =
+		slider?.querySelector<HTMLElement>(
+			'[data-prev]',
+		);
+
+	const nextButton =
+		slider?.querySelector<HTMLElement>(
+			'[data-next]',
+		);
+
+	let currentSlide = 0;
+
+
+	/* ============================================================
+	   HELPERS
+	   ============================================================ */
+
+	function escapeHtml(value: string | null | undefined) {
+		const div = document.createElement('div');
+
+		div.textContent = value ?? '';
+
+		return div.innerHTML;
+	}
+
+
+	function formatEventDate(dateString: string) {
+		const date = new Date(
+			`${dateString}T00:00:00Z`,
+		);
+
+		return new Intl.DateTimeFormat('en-US', {
+			month: 'long',
+			day: '2-digit',
+			year: 'numeric',
+			timeZone: 'UTC',
+		}).format(date);
+	}
+
+
+	function formatBadgeDateLive(dateString: string) {
+		const date = new Date(
+			`${dateString}T00:00:00Z`,
+		);
+
+		return {
+			month: new Intl.DateTimeFormat('en-US', {
+				month: 'short',
+				timeZone: 'UTC',
+			})
+				.format(date)
+				.toUpperCase(),
+
+			day: String(
+				date.getUTCDate(),
+			).padStart(2, '0'),
+		};
+	}
+
+
+	/* ============================================================
+	   RENDER RECENT EVENT CARDS
+	   ============================================================ */
+
+	function renderEventList(
+		events: SupabaseEvent[],
+	) {
+		if (!eventList) return;
+
+		const recentEvents = events.slice(0, 3);
+
+		const cards = recentEvents
+			.map((event) => {
+				const date =
+					formatBadgeDateLive(
+						event.event_date,
+					);
+
+				return `
+					<a
+						class="event-card"
+						href="/events/${encodeURIComponent(event.slug)}"
+					>
+						<div class="date-badge">
+							<span class="month">
+								${date.month}
+							</span>
+
+							<span class="day">
+								${date.day}
+							</span>
+						</div>
+
+						<div>
+							<p class="title">
+								${escapeHtml(event.title)}
+							</p>
+
+							<p class="desc">
+								${escapeHtml(event.description)}
+							</p>
+						</div>
+					</a>
+				`;
+			})
+			.join('');
+
+		eventList.innerHTML = `
+			${cards}
+
+			<a
+				href="/events"
+				class="browse-btn"
+			>
+				Browse All Past Events
+			</a>
+		`;
+	}
+
+
+	/* ============================================================
+	   RENDER FEATURED SLIDES
+	   ============================================================ */
+
+	function renderFeaturedSlides(
+		events: SupabaseEvent[],
+	) {
+		if (!track) return;
+
+		/*
+		 * First use events marked as Featured.
+		 *
+		 * If there are no featured events,
+		 * use the latest published events.
+		 */
+		let featuredEvents =
+			events.filter(
+				(event) => event.featured === true,
+			);
+
+		if (featuredEvents.length === 0) {
+			featuredEvents = events;
+		}
+
+		/*
+		 * Maximum number of slides.
+		 */
+		featuredEvents =
+			featuredEvents.slice(0, 5);
+
+		if (featuredEvents.length === 0) {
+			return;
+		}
+
+		track.innerHTML =
+			featuredEvents
+				.map((event) => {
+					const date =
+						formatEventDate(
+							event.event_date,
+						);
+
+					const image =
+						event.image_url ||
+						'/images/home/event-techfest.png';
+
+					const hasRegistration =
+						event.registration_open === true &&
+						!!event.registration_link;
+
+					const buttonUrl =
+						hasRegistration
+							? event.registration_link!
+							: `/events/${encodeURIComponent(
+									event.slug,
+								)}`;
+
+					const buttonText =
+						hasRegistration
+							? 'Register Now'
+							: 'View Event';
+
+					return `
+						<div class="slide">
+
+							<img
+								src="${escapeHtml(image)}"
+								alt="${escapeHtml(event.title)}"
+							/>
+
+							<div class="gradient"></div>
+
+							<div class="slide-content">
+
+								<span class="badge">
+									${escapeHtml(
+										event.chapter ||
+											'ACTIVITY',
+									)}
+								</span>
+
+								<h3>
+									${escapeHtml(
+										event.title,
+									)}
+								</h3>
+
+								<p>
+									${escapeHtml(
+										event.description,
+									)}
+								</p>
+
+								<div class="meta">
+
+									<span class="date">
+
+										<img
+											src="/images/home/icon-calendar.svg"
+											alt=""
+										/>
+
+										${date}
+
+									</span>
+
+									<a
+										href="${escapeHtml(
+											buttonUrl,
+										)}"
+										class="btn-register"
+									>
+										${buttonText}
+									</a>
+
+								</div>
+
+							</div>
+						</div>
+					`;
+				})
+				.join('');
+
+		currentSlide = 0;
+
+		renderDots(
+			featuredEvents.length,
+		);
+
+		renderSlider();
+	}
+
+
+	/* ============================================================
+	   DYNAMIC SLIDER DOTS
+	   ============================================================ */
+
+	function renderDots(
+		count: number,
+	) {
+		const dotsContainer =
+			slider?.querySelector<HTMLElement>(
+				'[data-dots]',
+			);
+
+		if (!dotsContainer) return;
+
+		dotsContainer.innerHTML = '';
+
+		for (
+			let i = 0;
+			i < count;
+			i++
+		) {
+			const dot =
+				document.createElement(
+					'span',
+				);
+
+			dot.className =
+				i === 0
+					? 'dot active'
+					: 'dot';
+
+			dot.dataset.dot =
+				String(i);
+
+			dot.addEventListener(
+				'click',
+				() => {
+					currentSlide = i;
+
+					renderSlider();
+				},
+			);
+
+			dotsContainer.appendChild(
+				dot,
+			);
+		}
+	}
+
+
+	/* ============================================================
+	   SLIDER
+	   ============================================================ */
+
+	function renderSlider() {
+		if (!track) return;
+
+		const slides =
+			track.querySelectorAll(
+				'.slide',
+			);
+
+		const count =
+			slides.length;
+
+		if (!count) return;
+
+		if (
+			currentSlide >= count
+		) {
+			currentSlide = 0;
+		}
+
+		track.style.transform =
+			`translateX(-${
+				currentSlide * 100
+			}%)`;
+
+		const dots =
+			slider?.querySelectorAll<HTMLElement>(
+				'[data-dot]',
+			);
+
+		dots?.forEach(
+			(dot, index) => {
+				dot.classList.toggle(
+					'active',
+					index === currentSlide,
+				);
+			},
+		);
+	}
+
+
+	prevButton?.addEventListener(
+		'click',
+		() => {
+			if (!track) return;
+
+			const count =
+				track.querySelectorAll(
+					'.slide',
+				).length;
+
+			if (!count) return;
+
+			currentSlide =
+				(
+					currentSlide -
+					1 +
+					count
+				) % count;
+
+			renderSlider();
+		},
+	);
+
+
+	nextButton?.addEventListener(
+		'click',
+		() => {
+			if (!track) return;
+
+			const count =
+				track.querySelectorAll(
+					'.slide',
+				).length;
+
+			if (!count) return;
+
+			currentSlide =
+				(
+					currentSlide +
+					1
+				) % count;
+
+			renderSlider();
+		},
+	);
+
+
+	/* ============================================================
+	   LOAD CURRENT EVENTS FROM SUPABASE
+	   ============================================================ */
+
+	async function loadLiveEvents() {
+		const {
+			data,
+			error,
+		} = await supabase
+			.from('events')
+			.select('*')
+			.eq(
+				'published',
+				true,
+			)
+			.order(
+				'event_date',
+				{
+					ascending: false,
+				},
+			);
+
+		if (error) {
+			console.error(
+				'[Recent Activities] Could not load events:',
+				error,
+			);
+
+			return;
+		}
+
+		const events =
+			(data ?? []) as SupabaseEvent[];
+
+		console.log(
+			'[Recent Activities] Loaded:',
+			events.length,
+			'published events',
+		);
+
+		renderEventList(events);
+
+		renderFeaturedSlides(
+			events,
+		);
+	}
+
+
+	/* ============================================================
+	   INITIAL LIVE LOAD
+	   ============================================================ */
+
+	loadLiveEvents();
+
+
+	/* ============================================================
+	   SUPABASE REALTIME
+	   ============================================================ */
+
+	const recentActivitiesChannel =
+		supabase
+			.channel(
+				'recent-activities-live',
+			)
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'events',
+				},
+				(payload) => {
+					console.log(
+						'[Recent Activities] Realtime event:',
+						payload,
+					);
+
+					/*
+					 * Instead of manually modifying only
+					 * the changed row, fetch the complete
+					 * current list again.
+					 *
+					 * This automatically handles:
+					 *
+					 * INSERT
+					 * UPDATE
+					 * DELETE
+					 * published changes
+					 * featured changes
+					 * date changes
+					 * title changes
+					 * image changes
+					 */
+					loadLiveEvents();
+				},
+			)
+			.subscribe(
+				(status) => {
+					console.log(
+						'[Recent Activities] Realtime status:',
+						status,
+					);
+				},
+			);
+</script>
+
+
+<style is:global>
+	.activities {
+		background: #fff;
+		padding: 96px 0;
+	}
+
+	.activities .head {
+		margin-bottom: 64px;
+	}
+
+	.activities .head h2 {
+		font-size: 32px;
+		font-weight: 600;
+		color: var(--color-navy);
+		margin-bottom: 16px;
+	}
+
+	.activities .underline {
+		display: block;
+		width: 64px;
+		height: 6px;
+		border-radius: 12px;
+		background: var(--color-blue);
+	}
+
+	.activities .layout {
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: 48px;
+		align-items: start;
+	}
+
+	/* ============================================================
+	   SLIDER
+	   ============================================================ */
+
+	.activities .slider {
+		position: relative;
+		height: 460px;
+		border-radius: 16px;
+		overflow: hidden;
+		background: var(--color-navy);
+		border: 1px solid rgba(230, 231, 231, 0.5);
+		box-shadow:
+			0 10px 15px -3px rgba(0, 0, 0, 0.1),
+			0 4px 6px -4px rgba(0, 0, 0, 0.1);
+	}
+
+	.activities .track {
+		display: flex;
+		width: 100%;
+		height: 100%;
+		transition: transform 0.4s ease;
+	}
+
+	.activities .slide {
+		position: relative;
+		flex: 0 0 100%;
+		height: 100%;
+	}
+
+	.activities .slide > img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.activities .gradient {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			0deg,
+			#002855 0%,
+			rgba(0, 40, 85, 0.4) 50%,
+			rgba(0, 40, 85, 0) 100%
+		);
+		opacity: 0.95;
+	}
+
+	.activities .slide-content {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 40px;
+		max-width: 528px;
+	}
+
+	.activities .badge {
+		display: inline-flex;
+		align-self: flex-start;
+		padding: 6px 16px;
+		background: var(--color-blue);
+		border-radius: 4px;
+		font-size: 12px;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: #fff;
+	}
+
+	.activities .slide-content h3 {
+		font-size: 32px;
+		font-weight: 600;
+		color: #fff;
+		margin: 0;
+	}
+
+	.activities .slide-content p {
+		font-size: 18px;
+		color: rgba(255, 255, 255, 0.8);
+		line-height: 1.6;
+		margin: 0;
+	}
+
+	.activities .meta {
+		display: flex;
+		align-items: center;
+		gap: 32px;
+		padding-top: 8px;
+	}
+
+	.activities .date {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 14px;
+		color: #fff;
+	}
+
+	.activities .date img {
+		width: 18px;
+		height: 20px;
+		object-fit: contain;
+	}
+
+	.activities .btn-register {
+		background: #fff;
+		color: var(--color-navy);
+		padding: 12px 32px;
+		border-radius: 4px;
+		font-size: 16px;
+		text-decoration: none;
+		box-shadow:
+			0 20px 25px -5px rgba(0, 0, 0, 0.1),
+			0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	}
+
+	.activities .btn-register:hover {
+		opacity: 0.9;
+	}
+
+	/* ============================================================
+	   SLIDER BUTTONS
+	   ============================================================ */
+
+	.activities .nav-btn {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 40px;
+		height: 40px;
+		border-radius: 12px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(6px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+		cursor: pointer;
+		z-index: 5;
+	}
+
+	.activities .slider:hover .nav-btn {
+		opacity: 1;
+	}
+
+	.activities .nav-btn.prev {
+		left: 16px;
+	}
+
+	.activities .nav-btn.next {
+		right: 16px;
+	}
+
+	.activities .nav-btn img {
+		width: 7.4px;
+		height: 12px;
+		object-fit: contain;
+	}
+
+	/* ============================================================
+	   DOTS
+	   ============================================================ */
+
+	.activities .dots {
+		position: absolute;
+		bottom: 24px;
+		right: 40px;
+		display: flex;
+		gap: 8px;
+		z-index: 5;
+	}
+
+	.activities .dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 12px;
+		background: rgba(255, 255, 255, 0.4);
+		cursor: pointer;
+		transition:
+			width 0.2s ease,
+			background 0.2s ease;
+	}
+
+	.activities .dot.active {
+		width: 24px;
+		background: #fff;
+	}
+
+	/* ============================================================
+	   EVENT LIST
+	   ============================================================ */
+
+	.activities .event-list {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.activities .event-card {
+		display: flex;
+		gap: 20px;
+		padding: 21px;
+		background: #fff;
+		border: 1px solid rgba(230, 231, 231, 0.4);
+		border-radius: 16px;
+		text-decoration: none;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+
+	.activities .event-card:hover {
+		transform: translateY(-2px);
+		box-shadow:
+			0 10px 20px rgba(0, 0, 0, 0.06);
+	}
+
+	.activities .date-badge {
+		flex-shrink: 0;
+		width: 64px;
+		height: 64px;
+		border-radius: 8px;
+		background: rgba(0, 98, 155, 0.05);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.activities .month {
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--color-blue);
+	}
+
+	.activities .day {
+		font-size: 24px;
+		font-weight: 900;
+		color: var(--color-blue);
+	}
+
+	.activities .title {
+		font-size: 16px;
+		color: var(--color-text);
+		margin: 0;
+	}
+
+	.activities .desc {
+		font-size: 14px;
+		color: var(--color-text-secondary);
+		padding-top: 4px;
+		margin: 0;
+		line-height: 1.45;
+	}
+
+	.activities .browse-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 18px 2px;
+		border: 2px dashed rgba(0, 98, 155, 0.2);
+		border-radius: 16px;
+		color: var(--color-blue);
+		font-size: 16px;
+		text-decoration: none;
+		transition:
+			background 0.2s ease,
+			border-color 0.2s ease;
+	}
+
+	.activities .browse-btn:hover {
+		background: rgba(0, 98, 155, 0.03);
+		border-color: rgba(0, 98, 155, 0.4);
+	}
+
+	/* ============================================================
+	   RESPONSIVE
+	   ============================================================ */
+
+	@media (max-width: 900px) {
+		.activities .layout {
+			grid-template-columns: 1fr;
+		}
+
+		.activities .slider {
+			height: 380px;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.activities {
+			padding: 64px 0;
+		}
+
+		.activities .head {
+			margin-bottom: 40px;
+		}
+
+		.activities .head h2 {
+			font-size: 28px;
+		}
+
+		.activities .slider {
+			height: 360px;
+		}
+
+		.activities .slide-content {
+			padding: 24px;
+			max-width: 100%;
+		}
+
+		.activities .slide-content h3 {
+			font-size: 24px;
+		}
+
+		.activities .slide-content p {
+			font-size: 15px;
+		}
+
+		.activities .meta {
+			gap: 16px;
+			flex-wrap: wrap;
+		}
+
+		.activities .dots {
+			right: 24px;
+			bottom: 18px;
+		}
+
+		.activities .event-card {
+			padding: 16px;
+			gap: 14px;
+		}
+	}
+</style>

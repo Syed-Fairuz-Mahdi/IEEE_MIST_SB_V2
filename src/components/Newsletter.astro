@@ -1,0 +1,140 @@
+---
+---
+
+<section class="newsletter">
+	<div class="container content">
+		<h2>Stay Ahead of the Curve</h2>
+		<p>
+			Join our newsletter to receive the latest updates on technical workshops, seminars, and
+			networking events directly in your inbox.
+		</p>
+		<form class="form" data-newsletter-form>
+			<input
+				type="email"
+				name="email"
+				placeholder="Enter your academic email"
+				required
+				maxlength="254"
+				autocomplete="email"
+				aria-label="Academic email"
+			/>
+			<!-- Honeypot: hidden from people, irresistible to bots. -->
+			<div class="hp" aria-hidden="true">
+				<label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+			</div>
+			<button type="submit">Subscribe</button>
+			<p class="status" data-status role="status" aria-live="polite"></p>
+		</form>
+	</div>
+</section>
+
+<script>
+	import { bindForm, subscribeToNewsletter } from '../lib/forms';
+
+	document
+		.querySelectorAll<HTMLFormElement>('form[data-newsletter-form]')
+		.forEach((form) => bindForm(form, subscribeToNewsletter));
+</script>
+
+<style>
+	.newsletter {
+		background: var(--color-navy);
+		padding: 96px 0;
+	}
+
+	.content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 24px;
+		text-align: center;
+	}
+
+	h2 {
+		font-size: 32px;
+		font-weight: 600;
+		color: #fff;
+	}
+
+	p {
+		max-width: 672px;
+		font-size: 20px;
+		color: rgba(255, 255, 255, 0.7);
+		line-height: 1.6;
+	}
+
+	.form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		width: 100%;
+		max-width: 512px;
+		padding-top: 24px;
+	}
+
+	.form input {
+		flex: 1;
+		padding: 19px 25px;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 8px;
+		color: #fff;
+		font-size: 16px;
+		font-family: var(--font-sans);
+	}
+
+	.hp {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+	}
+
+	.form input::placeholder {
+		color: rgba(255, 255, 255, 0.4);
+	}
+
+	.form button {
+		padding: 17px 40px;
+		background: var(--color-blue);
+		border: none;
+		border-radius: 8px;
+		color: #fff;
+		font-size: 16px;
+		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+		cursor: pointer;
+	}
+
+	.form button:disabled {
+		opacity: 0.6;
+		cursor: progress;
+	}
+
+	.status {
+		flex-basis: 100%;
+		margin: 0;
+		font-size: 15px;
+		line-height: 1.5;
+		text-align: center;
+		color: rgba(255, 255, 255, 0.8);
+	}
+
+	.status:empty {
+		display: none;
+	}
+
+	.status[data-state='success'] {
+		color: #7ee2a8;
+	}
+
+	.status[data-state='error'] {
+		color: #ffb4ab;
+	}
+
+	@media (max-width: 560px) {
+		.form {
+			flex-direction: column;
+		}
+	}
+</style>
