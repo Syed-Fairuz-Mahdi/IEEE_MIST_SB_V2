@@ -12,7 +12,25 @@ const navLinks = [
 			href: withBase(`/chapters/${chapter.slug}`),
 		})),
 	},
+	{
+		label: 'Chapters & Affiliations',
+		sections: [
+			{
+				heading: 'Affiliations',
+				links: [{ label: 'Women in Engineering (WIE)', href: withBase('/wie') }],
+			},
+			{
+				heading: 'Chapters',
+				links: [
+					{ label: 'Robotics & Automation Society (RAS)', href: withBase('/chapters/ras') },
+					{ label: 'Computer Society (CS)', href: withBase('/chapters/cs') },
+					{ label: 'Power & Energy Society (PES)', href: withBase('/chapters/pes') },
+				],
+			},
+		],
+	},
 	{ label: 'Events', href: withBase('/events') },
+	{ label: 'Blog', href: withBase('/blog') },
 	{ label: 'About', href: withBase('/about') },
 	{ label: 'Contact', href: withBase('/contact') },
 	{ label: 'Legacy', href: withBase('/legacy') },
@@ -21,6 +39,10 @@ const navLinks = [
 const normalize = (path: string) => (path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path);
 const current = normalize(Astro.url.pathname);
 const home = normalize(withBase('/'));
+
+function sectionsActive(sections: { links: { href: string }[] }[]): boolean {
+	return sections.some((section) => section.links.some((l) => isActive(l.href)));
+}
 
 function isActive(href: string): boolean {
 	const target = normalize(href);
@@ -38,7 +60,29 @@ function isActive(href: string): boolean {
 		<nav class="nav" id="primary-nav">
 			{
 				navLinks.map((link) =>
-					link.children ? (
+					link.sections ? (
+						<div class="has-dropdown collapsible">
+							<button
+								type="button"
+								class:list={['nav-link', 'dropdown', 'dropdown-trigger', { active: sectionsActive(link.sections) }]}
+								aria-expanded="false"
+								aria-haspopup="true"
+							>
+								{link.label}
+								<img src={withBase('images/home/icon-chevron-down.svg')} alt="" class="chevron" />
+							</button>
+							<div class="dropdown-menu">
+								{link.sections.map((section) => (
+									<div class="menu-section">
+										<p class="menu-heading">{section.heading}</p>
+										{section.links.map((child) => (
+											<a href={child.href}>{child.label}</a>
+										))}
+									</div>
+								))}
+							</div>
+						</div>
+					) : link.children ? (
 						<div class="has-dropdown">
 							<a href={link.href} class:list={['nav-link', 'dropdown', { active: isActive(link.href) }]}>
 								{link.label}
@@ -77,6 +121,30 @@ function isActive(href: string): boolean {
 	toggle?.addEventListener('click', () => {
 		const open = header?.classList.toggle('nav-open') ?? false;
 		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// "Chapters & Affiliations" dropdown: the trigger is a button, so clicking never navigates.
+	const dropdowns = document.querySelectorAll<HTMLElement>('.has-dropdown.collapsible');
+
+	function setOpen(wrap: HTMLElement, open: boolean) {
+		wrap.classList.toggle('open', open);
+		wrap.querySelector('.dropdown-trigger')?.setAttribute('aria-expanded', String(open));
+	}
+
+	dropdowns.forEach((wrap) => {
+		wrap.querySelector('.dropdown-trigger')?.addEventListener('click', () => {
+			setOpen(wrap, !wrap.classList.contains('open'));
+		});
+	});
+
+	document.addEventListener('click', (event) => {
+		dropdowns.forEach((wrap) => {
+			if (!wrap.contains(event.target as Node)) setOpen(wrap, false);
+		});
+	});
+
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') dropdowns.forEach((wrap) => setOpen(wrap, false));
 	});
 </script>
 
@@ -161,8 +229,64 @@ function isActive(href: string): boolean {
 		transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
 	}
 
-	.has-dropdown:hover .dropdown-menu,
-	.has-dropdown:focus-within .dropdown-menu {
+	.has-dropdown:not(.collapsible):hover .dropdown-menu,
+	.has-dropdown:not(.collapsible):focus-within .dropdown-menu {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0);
+	}
+
+	button.nav-link {
+		background: none;
+		border-top: 0;
+		border-left: 0;
+		border-right: 0;
+		font-family: inherit;
+		cursor: pointer;
+	}
+
+	.collapsible .chevron {
+		transition: transform 0.15s ease;
+	}
+
+	.collapsible.open .chevron {
+		transform: rotate(180deg);
+	}
+
+	.collapsible .dropdown-menu {
+		min-width: 320px;
+	}
+
+	.menu-section + .menu-section {
+		margin-top: 6px;
+		padding-top: 6px;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.menu-section {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.menu-heading {
+		padding: 8px 14px 4px;
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--color-text-muted);
+	}
+
+	/* Collapsible dropdown opens on hover (real pointers only) or when toggled open. */
+	@media (hover: hover) {
+		.collapsible:hover .dropdown-menu {
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+		}
+	}
+
+	.collapsible.open .dropdown-menu {
 		opacity: 1;
 		visibility: visible;
 		transform: translateY(0);
@@ -264,6 +388,29 @@ function isActive(href: string): boolean {
 			background: rgba(255, 255, 255, 0.06);
 			border: none;
 			box-shadow: none;
+		}
+
+		.collapsible .dropdown-menu {
+			display: none;
+			min-width: 0;
+		}
+
+		.collapsible.open .dropdown-menu {
+			display: flex;
+		}
+
+		button.nav-link {
+			width: 100%;
+			justify-content: space-between;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+		}
+
+		.menu-section + .menu-section {
+			border-top-color: rgba(255, 255, 255, 0.15);
+		}
+
+		.menu-heading {
+			color: rgba(255, 255, 255, 0.55);
 		}
 
 		.dropdown-menu a {
