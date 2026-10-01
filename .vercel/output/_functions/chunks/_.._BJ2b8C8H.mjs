@@ -5,7 +5,7 @@ import { i as $$Layout, n as $$Header, r as chapters, t as $$Footer } from "./Fo
 import { t as selectRows } from "./supabase_CaY0y9-v.mjs";
 import { n as formatLongDate, r as isPast } from "./date_B0MtY5m8.mjs";
 import { t as $$EventCard } from "./EventCard_BTTJe6w4.mjs";
-import { n as renderEntry, t as getAllEvents } from "./events_MzLjt4GD.mjs";
+import { n as renderEntry, t as getAllEvents } from "./events_BEEqhG_I.mjs";
 import { t as $$Newsletter } from "./Newsletter_DEtmCIvw.mjs";
 //#region src/components/EventRegistration.astro
 createAstro("https://ieee-mist-sb.vercel.app");

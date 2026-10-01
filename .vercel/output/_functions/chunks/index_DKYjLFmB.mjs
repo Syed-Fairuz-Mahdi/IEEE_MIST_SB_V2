@@ -6,7 +6,7 @@ import { i as $$Layout, n as $$Header, t as $$Footer } from "./Footer_BuE3G6X0.m
 import { n as getExecutiveCommittee, r as getLeadershipMessages, t as getAssociateCommittee } from "./content_CNdbUv0G.mjs";
 import { t as $$ChapterStory } from "./ChapterStory_CYnYNYMp.mjs";
 import { t as formatBadgeDate } from "./date_B0MtY5m8.mjs";
-import { t as getAllEvents } from "./events_MzLjt4GD.mjs";
+import { t as getAllEvents } from "./events_BEEqhG_I.mjs";
 import { t as $$Newsletter } from "./Newsletter_DEtmCIvw.mjs";
 //#region src/assets/images/hero-bg.png
 var hero_bg_default = new Proxy({

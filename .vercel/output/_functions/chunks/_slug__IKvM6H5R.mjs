@@ -8,7 +8,7 @@ import { t as $$ChapterStory } from "./ChapterStory_CYnYNYMp.mjs";
 import { t as $$SectionHeading } from "./SectionHeading_BusCmr6x.mjs";
 import { n as chapterCta, t as chapterCopy } from "./chapterCopy_etaX1JrK.mjs";
 import { t as $$EventCard } from "./EventCard_BTTJe6w4.mjs";
-import { t as getAllEvents } from "./events_MzLjt4GD.mjs";
+import { t as getAllEvents } from "./events_BEEqhG_I.mjs";
 //#region src/components/ChapterHero.astro
 createAstro("https://ieee-mist-sb.vercel.app");
 var $$ChapterHero = createComponent(($$result, $$props, $$slots) => {
