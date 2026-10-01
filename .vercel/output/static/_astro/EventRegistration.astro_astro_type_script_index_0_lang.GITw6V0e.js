@@ -1,1 +1,0 @@
-import{n as e,t}from"./forms.D1RWQzUw.js";document.querySelectorAll(`form[data-event-registration]`).forEach(n=>t(n,e));
