@@ -4,14 +4,15 @@ import { withBase } from '../utils/paths';
 
 const navLinks = [
 	{ label: 'Home', href: withBase('/') },
-	{
-		label: 'Chapters',
-		href: withBase('/chapters'),
-		children: chapters.map((chapter) => ({
-			label: `${chapter.code} — ${chapter.fullName}`,
-			href: withBase(`/chapters/${chapter.slug}`),
-		})),
-	},
+	// Replaced by the "Chapters & Affiliations" dropdown below. Uncomment to restore.
+	// {
+	// 	label: 'Chapters',
+	// 	href: withBase('/chapters'),
+	// 	children: chapters.map((chapter) => ({
+	// 		label: `${chapter.code} — ${chapter.fullName}`,
+	// 		href: withBase(`/chapters/${chapter.slug}`),
+	// 	})),
+	// },
 	{
 		label: 'Chapters & Affiliations',
 		sections: [
