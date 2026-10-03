@@ -88,10 +88,6 @@ const fallbackSlides = [
 										</span>
 									)}
 
-									<h3>
-										{slide.title}
-									</h3>
-
 									<p>
 										{slide.description}
 									</p>
@@ -459,12 +455,6 @@ const fallbackSlides = [
 											'ACTIVITY',
 									)}
 								</span>
-
-								<h3>
-									${escapeHtml(
-										event.title,
-									)}
-								</h3>
 
 								<p>
 									${escapeHtml(
@@ -996,6 +986,7 @@ const fallbackSlides = [
 
 	.activities .event-card {
 		display: flex;
+		align-items: center;
 		gap: 20px;
 		padding: 21px;
 		background: #fff;
@@ -1051,6 +1042,10 @@ const fallbackSlides = [
 		padding-top: 4px;
 		margin: 0;
 		line-height: 1.45;
+	}
+
+	.activities .desc:empty {
+		display: none;
 	}
 
 	.activities .browse-btn {
