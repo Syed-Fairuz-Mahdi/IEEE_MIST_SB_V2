@@ -115,6 +115,42 @@ export const chapters: Chapter[] = [
 		chair: 'Mahdia Binte Maksud',
 		email: 'sps@ieeemist.org',
 	},
+	{
+		slug: 'npss',
+		code: 'NPSS',
+		shortName: 'NPSS',
+		fullName: 'Nuclear and Plasma Sciences Society',
+		nameLines: ['NUCLEAR AND', 'PLASMA SCIENCES', 'SOCIETY'],
+		logo: withBase('images/home/logo-npss.png'),
+		logoWhite: withBase('images/logos/logo-npss-white.png'),
+		bg: 'rgba(255, 224, 204, 0.4)',
+		accent: '#c2571a', // provisional until the official colour logo is supplied
+		tagline: 'Nuclear science, radiation instrumentation, and plasma technology.',
+		description:
+			'The IEEE MIST Nuclear and Plasma Sciences Society Student Branch Chapter brings students together around nuclear science, radiation detection, and plasma technologies.',
+		focusAreas: ['Nuclear Engineering', 'Radiation Detection', 'Plasma Science', 'Reactor Instrumentation'],
+		established: '2026',
+		chair: '',
+		email: '',
+	},
+	{
+		slug: 'embs',
+		code: 'EMBS',
+		shortName: 'EMBS',
+		fullName: 'Engineering in Medicine and Biology Society',
+		nameLines: ['ENGINEERING IN', 'MEDICINE AND', 'BIOLOGY SOCIETY'],
+		logo: withBase('images/home/logo-embs.png'),
+		logoWhite: withBase('images/logos/logo-embs-white.png'),
+		bg: 'rgba(204, 238, 238, 0.4)',
+		accent: '#0f8b8d', // provisional until the official colour logo is supplied
+		tagline: 'Engineering for medicine, biology, and healthcare technology.',
+		description:
+			'The IEEE MIST Engineering in Medicine and Biology Society Student Branch Chapter brings students together around biomedical engineering, medical devices, and healthcare technology.',
+		focusAreas: ['Biomedical Devices', 'Medical Imaging', 'Biosignals', 'Healthcare Technology'],
+		established: '2026',
+		chair: '',
+		email: '',
+	},
 ];
 
 export function getChapter(slug: string): Chapter | undefined {

@@ -52,7 +52,7 @@ create table if not exists public.events (
 	title              text not null,
 	event_date         date not null,
 	-- Chapter short code; 'SB' means a branch-wide event. Matches src/data/chapters.ts.
-	chapter            text not null default 'SB' check (chapter in ('SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS')),
+	chapter            text not null default 'SB' check (chapter in ('SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS')),
 	description        text not null,
 	body               text,                       -- full details; blank line = new paragraph
 	image_url          text,                       -- "/images/..." path or absolute https URL

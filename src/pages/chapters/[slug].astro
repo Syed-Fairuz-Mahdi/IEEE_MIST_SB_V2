@@ -140,11 +140,15 @@ const associates = associatesForChapter(
             accent2={accent2}
         />
 
-        <ChapterExecutiveCommittee
-            code={chapter.code}
-            members={panel}
-            accent={chapter.accent}
-        />
+        {
+            panel.length > 0 && (
+                <ChapterExecutiveCommittee
+                    code={chapter.code}
+                    members={panel}
+                    accent={chapter.accent}
+                />
+            )
+        }
 
         {
             associates.length > 0 && (

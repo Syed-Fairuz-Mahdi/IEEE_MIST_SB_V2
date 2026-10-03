@@ -23,9 +23,12 @@ const navLinks = [
 			{
 				heading: 'Chapters',
 				links: [
-					{ label: 'Robotics & Automation Society (RAS)', href: withBase('/chapters/ras') },
-					{ label: 'Computer Society (CS)', href: withBase('/chapters/cs') },
-					{ label: 'Power & Energy Society (PES)', href: withBase('/chapters/pes') },
+					...chapters
+						.filter((chapter) => chapter.slug !== 'wie')
+						.map((chapter) => ({
+							label: `${chapter.fullName} (${chapter.code})`,
+							href: withBase(`/chapters/${chapter.slug}`),
+						})),
 				],
 			},
 		],

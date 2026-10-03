@@ -34,7 +34,7 @@ interface LiveEvent {
 	data: {
 		title: string;
 		date: Date;
-		chapter: 'SB' | 'EDS' | 'APS' | 'WIE' | 'MTT-S' | 'SPS';
+		chapter: 'SB' | 'EDS' | 'APS' | 'WIE' | 'MTT-S' | 'SPS' | 'NPSS' | 'EMBS';
 		description: string;
 		image?: string;
 		location?: string;
@@ -47,7 +47,7 @@ interface LiveEvent {
 	body?: string;
 }
 
-const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS'] as const;
+const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS'] as const;
 
 function fromRow(row: EventRow): LiveEvent | null {
 	const date = new Date(row.event_date);
@@ -153,7 +153,7 @@ const initialEvents = all.map((event) => ({
 				<h1>Activities &amp; Insights</h1>
 				<p>
 					Workshops, seminars, symposiums and competitions from the IEEE MIST Student Branch and its
-					five technical chapters.
+					six technical chapters.
 				</p>
 			</div>
 		</section>

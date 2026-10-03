@@ -41,7 +41,7 @@ interface EventRow {
 	tags: string[] | null;
 }
 
-const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS'] as const;
+const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS'] as const;
 
 function fromRow(row: EventRow): SiteEvent | null {
 	const date = new Date(row.event_date);

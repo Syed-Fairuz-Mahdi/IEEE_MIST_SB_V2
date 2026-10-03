@@ -13,7 +13,7 @@ const events = defineCollection({
 		title: z.string(),
 		date: z.coerce.date(),
 		/** Chapter short code — must match a `shortName` in src/data/chapters.ts, or "SB" for branch-wide events. */
-		chapter: z.enum(['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS']),
+		chapter: z.enum(['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS']),
 		description: z.string(),
 		image: z.string().optional(),
 		location: z.string().optional(),

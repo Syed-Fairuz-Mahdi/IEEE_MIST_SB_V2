@@ -210,6 +210,64 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 			'The IEEE Microwave Theory and Technology Society (MTT-S) is a transnational society with more than 10,000 members and 190 chapters worldwide. Our student branch chapter at MIST focuses on the theory and application of RF, microwave, mm-wave, and terahertz technologies.',
 		],
 	},
+	npss: {
+		heroTitle: 'Nuclear and Plasma Sciences Society',
+		heroSubtitle:
+			'Exploring nuclear science, radiation detection, and plasma technologies, from reactor instrumentation to fusion research.',
+		about: [
+			'The IEEE Nuclear and Plasma Sciences Society (NPSS) is a technical society that advances nuclear science, radiation instrumentation, plasma science, and the engineering built on them.',
+			'The NPSS MIST Student Branch Chapter gives students a place to explore these fields beyond the classroom through seminars, workshops, and interaction with researchers and practitioners.',
+		],
+		mission: [],
+		missionHeading: 'Mission & Vision',
+		missionItems: [
+			{
+				icon: 'rocket',
+				title: 'Our Mission',
+				description:
+					'To promote learning and technical collaboration in nuclear and plasma sciences through seminars, workshops, and projects within the MIST community.',
+			},
+			{
+				icon: 'eye',
+				title: 'Our Vision',
+				description:
+					'To build an active community of students who understand and contribute to nuclear and plasma technologies.',
+			},
+		],
+		story: [
+			'The IEEE NPSS MIST Student Branch Chapter is one of the newest chapters of the IEEE MIST Student Branch.',
+			'Its activities, programmes, and leadership will be announced here as the chapter grows.',
+		],
+	},
+	embs: {
+		heroTitle: 'Engineering in Medicine and Biology Society',
+		heroSubtitle:
+			'Applying engineering to medicine and biology, from medical devices and imaging to biosignals and healthcare technology.',
+		about: [
+			'The IEEE Engineering in Medicine and Biology Society (EMBS) is a technical society for biomedical engineering, covering medical devices, imaging, biosignals, and healthcare technology.',
+			'The EMBS MIST Student Branch Chapter gives students a place to explore these fields beyond the classroom through seminars, workshops, and interaction with researchers and practitioners.',
+		],
+		mission: [],
+		missionHeading: 'Mission & Vision',
+		missionItems: [
+			{
+				icon: 'rocket',
+				title: 'Our Mission',
+				description:
+					'To promote learning and technical collaboration in biomedical engineering through seminars, workshops, and projects within the MIST community.',
+			},
+			{
+				icon: 'eye',
+				title: 'Our Vision',
+				description:
+					'To build an active community of students who apply engineering to improve medicine, biology, and healthcare.',
+			},
+		],
+		story: [
+			'The IEEE EMBS MIST Student Branch Chapter is one of the newest chapters of the IEEE MIST Student Branch.',
+			'Its activities, programmes, and leadership will be announced here as the chapter grows.',
+		],
+	},
 };
 
 /**

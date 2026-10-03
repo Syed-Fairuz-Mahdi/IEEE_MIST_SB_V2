@@ -43,6 +43,8 @@ collections:
           - { label: 'WIE — Women in Engineering', value: 'WIE' }
           - { label: 'MTT-S — Microwave Theory and Technology Society', value: 'MTT-S' }
           - { label: 'SPS — Signal Processing Society', value: 'SPS' }
+          - { label: 'NPSS — Nuclear and Plasma Sciences Society', value: 'NPSS' }
+          - { label: 'EMBS — Engineering in Medicine and Biology Society', value: 'EMBS' }
       - {
           name: description,
           label: Short description,

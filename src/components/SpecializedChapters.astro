@@ -1,38 +1,10 @@
 ---
+import { chapters } from '../data/chapters';
 import { withBase } from '../utils/paths';
 
-const chapters = [
-	{
-		code: 'EDS',
-		name: ['ELECTRON', 'DEVICES SOCIETY'],
-		logo: withBase('images/home/logo-eds.png'),
-		bg: '#e9fdff',
-	},
-	{
-		code: 'APS',
-		name: ['ANTENNAS AND', 'PROPAGATION', 'SOCIETY'],
-		logo: withBase('images/home/logo-aps.png'),
-		bg: 'rgba(102, 123, 255, 0.06)',
-	},
-	{
-		code: 'WIE',
-		name: ['WOMEN IN', 'ENGINEERING'],
-		logo: withBase('images/home/logo-wie.png'),
-		bg: 'rgba(237, 230, 238, 0.4)',
-	},
-	{
-		code: 'MTT-S',
-		name: ['MICROWAVE', 'THEORY AND', 'TECHNOLOGY', 'SOCIETY'],
-		logo: withBase('images/home/logo-mtts.png'),
-		bg: 'rgba(215, 212, 232, 0.4)',
-	},
-	{
-		code: 'SPS',
-		name: ['SIGNAL', 'PROCESSING', 'SOCIETY'],
-		logo: withBase('images/home/logo-sps.png'),
-		bg: 'rgba(202, 234, 211, 0.4)',
-	},
-];
+// WIE is an IEEE affinity group (an affiliation), not a technical society chapter.
+const technicalChapters = chapters.filter((chapter) => chapter.slug !== 'wie');
+const affiliation = chapters.find((chapter) => chapter.slug === 'wie');
 ---
 
 <section class="chapters">
@@ -44,25 +16,55 @@ const chapters = [
 
 		<div class="grid">
 			{
-				chapters.map((chapter) => (
-					<div class="card" style={`background:${chapter.bg}`}>
+				technicalChapters.map((chapter) => (
+					<a href={withBase(`/chapters/${chapter.slug}`)} class="card" style={`background:${chapter.bg}`}>
 						<div class="logo">
 							<img src={chapter.logo} alt={`${chapter.code} logo`} />
 						</div>
 						<p class="code">{chapter.code}</p>
 						<span class="code-underline" aria-hidden="true"></span>
 						<p class="name">
-							{chapter.name.map((line) => (
+							{chapter.nameLines.map((line) => (
 								<>
 									{line}
 									<br />
 								</>
 							))}
 						</p>
-					</div>
+					</a>
 				))
 			}
 		</div>
+
+		{
+			affiliation && (
+				<div class="affiliation">
+					<div class="heading">
+						<h2>Our Affiliation</h2>
+						<p>Women in Engineering is an IEEE affinity group that works alongside the branch</p>
+					</div>
+					<div class="grid">
+						{[affiliation].map((chapter) => (
+							<a href={withBase(`/chapters/${chapter.slug}`)} class="card" style={`background:${chapter.bg}`}>
+						<div class="logo">
+							<img src={chapter.logo} alt={`${chapter.code} logo`} />
+						</div>
+						<p class="code">{chapter.code}</p>
+						<span class="code-underline" aria-hidden="true"></span>
+						<p class="name">
+							{chapter.nameLines.map((line) => (
+								<>
+									{line}
+									<br />
+								</>
+							))}
+						</p>
+					</a>
+						))}
+					</div>
+				</div>
+			)
+		}
 	</div>
 </section>
 
@@ -101,12 +103,26 @@ const chapters = [
 	}
 
 	.card {
+		display: block;
+		color: inherit;
+		text-decoration: none;
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
 		width: 217px;
 		padding: 41px;
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 16px;
 		backdrop-filter: blur(2px);
 		text-align: left;
+	}
+
+	.card:hover,
+	.card:focus-visible {
+		transform: translateY(-4px);
+		box-shadow: 0 12px 28px -16px rgba(0, 40, 85, 0.45);
+	}
+
+	.affiliation {
+		margin-top: 64px;
 	}
 
 	.logo {

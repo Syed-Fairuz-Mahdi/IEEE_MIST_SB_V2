@@ -18,7 +18,7 @@ import { withBase } from '../utils/paths';
  */
 
 // Order requested for the current-year breakout: Student Branch, then chapters in this order.
-const chapterOrder = ['eds', 'wie', 'aps', 'mtt-s', 'sps'];
+const chapterOrder = ['eds', 'wie', 'aps', 'mtt-s', 'sps', 'npss', 'embs'];
 
 const yearTabs = legacyPanels.map((panel) => {
 	const sections = panel.current
@@ -37,7 +37,7 @@ const yearTabs = legacyPanels.map((panel) => {
 						accent: chapter?.accent ?? 'var(--color-blue)',
 						members,
 					};
-				}),
+				}).filter((section) => section.members.length > 0),
 			]
 		: [{ heading: null, code: null, accent: null, members: panel.members }];
 
