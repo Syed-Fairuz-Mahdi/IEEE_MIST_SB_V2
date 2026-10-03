@@ -212,11 +212,10 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 	},
 	npss: {
 		heroTitle: 'Nuclear and Plasma Sciences Society',
-		heroSubtitle:
-			'Exploring nuclear science, radiation detection, and plasma technologies, from reactor instrumentation to fusion research.',
+		heroSubtitle: 'Placeholder — a one-line summary of the NPSS Student Branch Chapter.',
 		about: [
-			'The IEEE Nuclear and Plasma Sciences Society (NPSS) is a technical society that advances nuclear science, radiation instrumentation, plasma science, and the engineering built on them.',
-			'The NPSS MIST Student Branch Chapter gives students a place to explore these fields beyond the classroom through seminars, workshops, and interaction with researchers and practitioners.',
+			'Placeholder — a paragraph about the IEEE NPSS Student Branch Chapter at MIST.',
+			'Placeholder — a second paragraph about the chapter and what it does.',
 		],
 		mission: [],
 		missionHeading: 'Mission & Vision',
@@ -224,28 +223,25 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 			{
 				icon: 'rocket',
 				title: 'Our Mission',
-				description:
-					'To promote learning and technical collaboration in nuclear and plasma sciences through seminars, workshops, and projects within the MIST community.',
+				description: 'Placeholder — the chapter mission statement.',
 			},
 			{
 				icon: 'eye',
 				title: 'Our Vision',
-				description:
-					'To build an active community of students who understand and contribute to nuclear and plasma technologies.',
+				description: 'Placeholder — the chapter vision statement.',
 			},
 		],
 		story: [
-			'The IEEE NPSS MIST Student Branch Chapter is one of the newest chapters of the IEEE MIST Student Branch.',
-			'Its activities, programmes, and leadership will be announced here as the chapter grows.',
+			'Placeholder — the chapter story, written by the chapter chair.',
+			'Placeholder — a second paragraph of the story.',
 		],
 	},
 	embs: {
 		heroTitle: 'Engineering in Medicine and Biology Society',
-		heroSubtitle:
-			'Applying engineering to medicine and biology, from medical devices and imaging to biosignals and healthcare technology.',
+		heroSubtitle: 'Placeholder — a one-line summary of the EMBS Student Branch Chapter.',
 		about: [
-			'The IEEE Engineering in Medicine and Biology Society (EMBS) is a technical society for biomedical engineering, covering medical devices, imaging, biosignals, and healthcare technology.',
-			'The EMBS MIST Student Branch Chapter gives students a place to explore these fields beyond the classroom through seminars, workshops, and interaction with researchers and practitioners.',
+			'Placeholder — a paragraph about the IEEE EMBS Student Branch Chapter at MIST.',
+			'Placeholder — a second paragraph about the chapter and what it does.',
 		],
 		mission: [],
 		missionHeading: 'Mission & Vision',
@@ -253,19 +249,17 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 			{
 				icon: 'rocket',
 				title: 'Our Mission',
-				description:
-					'To promote learning and technical collaboration in biomedical engineering through seminars, workshops, and projects within the MIST community.',
+				description: 'Placeholder — the chapter mission statement.',
 			},
 			{
 				icon: 'eye',
 				title: 'Our Vision',
-				description:
-					'To build an active community of students who apply engineering to improve medicine, biology, and healthcare.',
+				description: 'Placeholder — the chapter vision statement.',
 			},
 		],
 		story: [
-			'The IEEE EMBS MIST Student Branch Chapter is one of the newest chapters of the IEEE MIST Student Branch.',
-			'Its activities, programmes, and leadership will be announced here as the chapter grows.',
+			'Placeholder — the chapter story, written by the chapter chair.',
+			'Placeholder — a second paragraph of the story.',
 		],
 	},
 };

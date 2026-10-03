@@ -125,11 +125,11 @@ export const chapters: Chapter[] = [
 		logoWhite: withBase('images/logos/logo-npss-white.png'),
 		bg: 'rgba(255, 224, 204, 0.4)',
 		accent: '#c2571a', // provisional until the official colour logo is supplied
-		tagline: 'Nuclear science, radiation instrumentation, and plasma technology.',
+		tagline: 'Placeholder — a one-line tagline for this chapter.',
 		description:
-			'The IEEE MIST Nuclear and Plasma Sciences Society Student Branch Chapter brings students together around nuclear science, radiation detection, and plasma technologies.',
-		focusAreas: ['Nuclear Engineering', 'Radiation Detection', 'Plasma Science', 'Reactor Instrumentation'],
-		established: '2026',
+			'Placeholder — a short paragraph describing the IEEE MIST Nuclear and Plasma Sciences Society Student Branch Chapter, its purpose, and what members can expect.',
+		focusAreas: [],
+		established: '',
 		chair: '',
 		email: '',
 	},
@@ -143,11 +143,11 @@ export const chapters: Chapter[] = [
 		logoWhite: withBase('images/logos/logo-embs-white.png'),
 		bg: 'rgba(204, 238, 238, 0.4)',
 		accent: '#0f8b8d', // provisional until the official colour logo is supplied
-		tagline: 'Engineering for medicine, biology, and healthcare technology.',
+		tagline: 'Placeholder — a one-line tagline for this chapter.',
 		description:
-			'The IEEE MIST Engineering in Medicine and Biology Society Student Branch Chapter brings students together around biomedical engineering, medical devices, and healthcare technology.',
-		focusAreas: ['Biomedical Devices', 'Medical Imaging', 'Biosignals', 'Healthcare Technology'],
-		established: '2026',
+			'Placeholder — a short paragraph describing the IEEE MIST Engineering in Medicine and Biology Society Student Branch Chapter, its purpose, and what members can expect.',
+		focusAreas: [],
+		established: '',
 		chair: '',
 		email: '',
 	},
