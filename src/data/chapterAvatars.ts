@@ -38,6 +38,20 @@ export const chapterExecAvatars: Record<string, Record<string, string>> = {
 	'mtt-s': {
 		'Sadia Chowdhury Mohona': withBase('images/chapters/wie/exec/sadia-mohona.jpg'),
 	},
+	embs: {
+		'Parsa Nusaiba Shafi': withBase('images/chapters/embs/exec/parsa-nusaiba.jpg'),
+		'Abbrita Rahman': withBase('images/chapters/embs/exec/abbrita-rahman.jpg'),
+		'Yeasir Hossain Khan': withBase('images/chapters/embs/exec/yeasir-khan.jpg'),
+		'Tahmeed Anan': withBase('images/chapters/embs/exec/tahmeed-anan.jpg'),
+		'Md Zahidul Islam Probal': withBase('images/chapters/embs/exec/zahidul-probal.jpg'),
+		'Yashira Hanifi Iqra': withBase('images/chapters/embs/exec/yashira-iqra.jpg'),
+	},
+	npss: {
+		'Sadia Noushin Promi': withBase('images/chapters/aps/exec/sadia-noushin-promi.jpg'),
+		'Nazifa Tasnim': withBase('images/chapters/aps/exec/nazifa-tasnim.jpg'),
+		'Noor Zahin': withBase('images/chapters/npss/exec/noor-zahin.jpg'),
+		'Pronojit Karmakar Mugdha': withBase('images/chapters/npss/exec/pronojit-mugdha.jpg'),
+	},
 };
 
 export const chapterAssociateAvatars: Record<string, Record<string, string>> = {
@@ -89,6 +103,7 @@ export const chapterAssociateAvatars: Record<string, Record<string, string>> = {
 /** Chapter-specific secondary accent, for chapters with a two-tone brand (e.g. WIE's purple/pink). */
 export const chapterAccent2: Record<string, string> = {
 	wie: '#E31B79',
+	embs: '#00669a', // EMBS logo blue, paired with the purple accent
 	'mtt-s': '#B87333', // copper, used for the mission checkmarks/badges in the MTT-S design
 };
 

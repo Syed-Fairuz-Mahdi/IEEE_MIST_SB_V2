@@ -130,7 +130,7 @@ export const chapters: Chapter[] = [
 			'Placeholder — a short paragraph describing the IEEE MIST Nuclear and Plasma Sciences Society Student Branch Chapter, its purpose, and what members can expect.',
 		focusAreas: [],
 		established: '',
-		chair: '',
+		chair: 'Sadia Noushin Promi',
 		email: '',
 	},
 	{
@@ -141,14 +141,14 @@ export const chapters: Chapter[] = [
 		nameLines: ['ENGINEERING IN', 'MEDICINE AND', 'BIOLOGY SOCIETY'],
 		logo: withBase('images/home/logo-embs.png'),
 		logoWhite: withBase('images/logos/logo-embs-white.png'),
-		bg: 'rgba(204, 238, 238, 0.4)',
-		accent: '#0f8b8d', // provisional until the official colour logo is supplied
+		bg: 'rgba(120, 42, 128, 0.08)',
+		accent: '#782a80', // EMBS purple, sampled from the official colour logo
 		tagline: 'Placeholder — a one-line tagline for this chapter.',
 		description:
-			'Placeholder — a short paragraph describing the IEEE MIST Engineering in Medicine and Biology Society Student Branch Chapter, its purpose, and what members can expect.',
+			'Our Student Chapter at MIST provides a platform for students to explore biomedical engineering through technical learning, research, innovation, professional development, and collaboration, while connecting them with the wider IEEE EMBS community.',
 		focusAreas: [],
 		established: '',
-		chair: '',
+		chair: 'Parsa Nusaiba Shafi',
 		email: '',
 	},
 ];

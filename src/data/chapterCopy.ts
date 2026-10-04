@@ -238,10 +238,11 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 	},
 	embs: {
 		heroTitle: 'Engineering in Medicine and Biology Society',
-		heroSubtitle: 'Placeholder — a one-line summary of the EMBS Student Branch Chapter.',
+		heroSubtitle:
+			"IEEE Engineering in Medicine and Biology Society is a global community dedicated to advancing engineering and technology at the intersection of engineering, medicine, and biology.",
 		about: [
-			'Placeholder — a paragraph about the IEEE EMBS Student Branch Chapter at MIST.',
-			'Placeholder — a second paragraph about the chapter and what it does.',
+			"IEEE Engineering in Medicine and Biology Society is a global community dedicated to advancing engineering and technology at the intersection of engineering, medicine, and biology.",
+			"Our Student Chapter at MIST provides a platform for students to explore biomedical engineering through technical learning, research, innovation, professional development, and collaboration, while connecting them with the wider IEEE EMBS community.",
 		],
 		mission: [],
 		missionHeading: 'Mission & Vision',
@@ -249,18 +250,24 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 			{
 				icon: 'rocket',
 				title: 'Our Mission',
-				description: 'Placeholder — the chapter mission statement.',
+				description:
+					"To foster learning, research, and innovation in biomedical engineering by connecting students through technical learning, research, innovation, collaboration and meaningful engagement with the global IEEE EMBS community.",
 			},
 			{
 				icon: 'eye',
 				title: 'Our Vision',
-				description: 'Placeholder — the chapter vision statement.',
+				description:
+					"To build a thriving biomedical engineering community at MIST that empowers students to transform knowledge and ideas into innovative solutions for better healthcare and meaningful real-world impact.",
 			},
 		],
+		// Chair's message, supplied by the chapter in its story document.
 		story: [
-			'Placeholder — the chapter story, written by the chapter chair.',
-			'Placeholder — a second paragraph of the story.',
+			"Every biomedical engineering journey starts with a question: How can engineering make healthcare better? At IEEE EMBS MIST Student Chapter, we believe that answering that question takes more than a classroom education. It takes curiosity, collaboration, experimentation, and a community that encourages students to turn ideas into meaningful solutions.",
+			"Our story begins with students who wanted to explore beyond textbooks to understand how biomedical signals become data, how medical devices can solve real clinical problems, how artificial intelligence can transform diagnosis, and how engineering can contribute to better healthcare. IEEE EMBS gives us a platform to bring these interests together. We are building a community where students from different backgrounds can learn from one another, connect with researchers and professionals, explore emerging technologies, and find opportunities to grow. Through technical sessions, hands-on workshops, seminars, research activities, competitions, and interactions with academics and industry professionals, we hope to turn curiosity into knowledge and ideas into possibilities.",
+			"As a Chapter, our role is to connect, empower, and inspire: connecting students with the global biomedical engineering community, empowering them to explore and create, and inspiring them to use engineering for meaningful impact. We hope to create an environment where a student can walk in with nothing more than an idea and leave with the knowledge, connections, and confidence to pursue it.",
+			"As Chair, I am committed to working alongside our members and the Chapter team to create a space where everyone has the opportunity to learn, contribute, and grow. I hope that IEEE EMBS MIST becomes a place where students not only discover the possibilities of biomedical engineering but also discover the kind of engineer they want to become.",
 		],
+		storyAttribution: 'Parsa Nusaiba Shafi, Chair — IEEE EMBS MIST SB',
 	},
 };
 

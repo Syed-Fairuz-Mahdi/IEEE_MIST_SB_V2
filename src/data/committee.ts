@@ -117,6 +117,22 @@ export const chapterPanels: Record<string, Member[]> = {
 		{ name: 'Sadia Chowdhury Mohona', role: 'Webmaster', department: 'EECE', major: 'Communication' },
 		{ name: 'Israt Jahan Isha', role: 'Visual Co-Ordinator', department: 'EECE', major: 'Communication' },
 	],
+	embs: [
+		{ name: 'Parsa Nusaiba Shafi', role: 'Chair', department: 'BME' },
+		{ name: 'Abbrita Rahman', role: 'Vice Chair', department: 'BME' },
+		{ name: 'Yeasir Hossain Khan', role: 'General Secretary', department: 'BME' },
+		{ name: 'Tahmeed Anan', role: 'Treasurer', department: 'BME' },
+		{ name: 'Md Zahidul Islam Probal', role: 'Webmaster', department: 'BME' },
+		{ name: 'Yashira Hanifi Iqra', role: 'Visual Co-Ordinator', department: 'BME' },
+	],
+	npss: [
+		{ name: 'Sadia Noushin Promi', role: 'Chair', department: 'NSE' },
+		{ name: 'Nazifa Tasnim', role: 'Vice Chair', department: 'NSE' },
+		{ name: 'Mhamudul Hasan Sami', role: 'General Secretary', department: 'NSE' },
+		{ name: 'Noor Zahin', role: 'Treasurer', department: 'NSE' },
+		{ name: 'Ishfaq Elahi', role: 'Webmaster', department: 'NSE' },
+		{ name: 'Pronojit Karmakar Mugdha', role: 'Visual Co-Ordinator', department: 'NSE' },
+	],
 };
 
 export interface AssociateGroup {
