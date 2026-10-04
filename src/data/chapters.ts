@@ -123,8 +123,8 @@ export const chapters: Chapter[] = [
 		nameLines: ['NUCLEAR AND', 'PLASMA SCIENCES', 'SOCIETY'],
 		logo: withBase('images/home/logo-npss.png'),
 		logoWhite: withBase('images/logos/logo-npss-white.png'),
-		bg: 'rgba(255, 224, 204, 0.4)',
-		accent: '#c2571a', // provisional until the official colour logo is supplied
+		bg: 'rgba(121, 40, 55, 0.08)',
+		accent: '#792837', // NPSS maroon, from the official logo background
 		tagline: 'Placeholder — a one-line tagline for this chapter.',
 		description:
 			'Placeholder — a short paragraph describing the IEEE MIST Nuclear and Plasma Sciences Society Student Branch Chapter, its purpose, and what members can expect.',
