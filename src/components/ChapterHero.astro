@@ -17,6 +17,8 @@ interface Props {
 	exploreLabel?: string;
 	eventsLabel?: string;
 	variant?: 'dark' | 'light';
+	/** Light hero washed in the chapter's accent colour instead of the default white. */
+	tinted?: boolean;
 }
 
 const {
@@ -33,6 +35,7 @@ const {
 	exploreLabel = 'Explore Our Impact',
 	eventsLabel = 'Upcoming Events',
 	variant = 'dark',
+	tinted = false,
 } = Astro.props;
 
 const patternExt = chapterHeroPattern[slug];
@@ -40,7 +43,7 @@ const pattern = patternExt ? withBase(`images/chapters/${slug}/bg-pattern.${patt
 const photo = chapterHeroPhoto[slug] ? withBase(chapterHeroPhoto[slug]) : null;
 ---
 
-<section class="chapter-hero" class:list={[variant]} style={`--accent:${accent}; --accent2:${accent2}`}>
+<section class="chapter-hero" class:list={[variant, { tinted }]} style={`--accent:${accent}; --accent2:${accent2}`}>
 	<div class="bg-layer">
 		{photo && <img src={photo} alt="" class="photo" />}
 		{pattern && <img src={pattern} alt="" class="pattern" />}
@@ -129,6 +132,18 @@ const photo = chapterHeroPhoto[slug] ? withBase(chapterHeroPhoto[slug]) : null;
 
 	.light .overlay {
 		background: linear-gradient(to bottom, color-mix(in srgb, var(--color-navy) 85%, transparent) 0%, var(--color-bg) 100%);
+	}
+
+	.chapter-hero.tinted {
+		background: color-mix(in srgb, var(--accent) 8%, #fff);
+	}
+
+	.tinted .overlay {
+		background: linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--accent) 12%, #fff) 0%,
+			color-mix(in srgb, var(--accent) 5%, #fff) 100%
+		);
 	}
 
 	.content {

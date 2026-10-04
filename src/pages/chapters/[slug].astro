@@ -112,12 +112,13 @@ const associates = associatesForChapter(
             subtitle={copy.heroSubtitle}
             accent={chapter.accent}
             accent2={accent2}
-            logo={chapter.logoWhite}
+            logo={chapter.slug === 'embs' ? chapter.logo : chapter.logoWhite}
             variant={
-                chapter.slug === 'mtt-s'
+                chapter.slug === 'mtt-s' || chapter.slug === 'embs'
                     ? 'light'
                     : 'dark'
             }
+            tinted={chapter.slug === 'embs'}
         />
 
         <ChapterStory
