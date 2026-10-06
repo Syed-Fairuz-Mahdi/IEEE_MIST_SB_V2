@@ -112,16 +112,16 @@ const associates = associatesForChapter(
             subtitle={copy.heroSubtitle}
             accent={chapter.accent}
             accent2={accent2}
-            logo={chapter.slug === 'embs' ? chapter.logo : chapter.logoWhite}
+            logo={chapter.slug === 'embs' || chapter.slug === 'npss' ? chapter.logo : chapter.logoWhite}
             variant={
-                chapter.slug === 'mtt-s' || chapter.slug === 'embs'
+                chapter.slug === 'mtt-s' || chapter.slug === 'embs' || chapter.slug === 'npss'
                     ? 'light'
                     : 'dark'
             }
-            tinted={chapter.slug === 'embs'}
+            tinted={chapter.slug === 'embs' || chapter.slug === 'npss'}
             heroBackground={
                 chapter.slug === 'npss'
-                    ? 'linear-gradient(135deg, #0a0a0a 0%, #4a0d17 52%, #a31d2d 100%)'
+                    ? 'linear-gradient(135deg, #ffffff 0%, #f7dede 40%, #e2a9ae 75%, #9a8185 100%)'
                     : undefined
             }
         />
