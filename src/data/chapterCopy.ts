@@ -214,8 +214,8 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 		heroTitle: 'Nuclear and Plasma Sciences Society',
 		heroSubtitle: "A MIST where no student has to choose between the atom and the circuit.",
 		about: [
-			'Placeholder — a paragraph about the IEEE NPSS Student Branch Chapter at MIST.',
-			'Placeholder — a second paragraph about the chapter and what it does.',
+			"The IEEE Nuclear and Plasma Sciences Society (NPSS) is IEEE's technical society for nuclear and plasma science and engineering. Its fields include radiation detection and instrumentation, nuclear power engineering and controls, plasma science and fusion, particle accelerators, and nuclear medical imaging.",
+			"The NPSS MIST Student Branch Chapter brings nuclear science and electrical engineering students together around these fields. Through technical sessions, workshops, competitions, and student research, we connect our members with the global NPSS community and with one another.",
 		],
 		mission: [],
 		missionHeading: 'Mission & Vision',
