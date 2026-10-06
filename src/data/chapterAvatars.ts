@@ -49,7 +49,9 @@ export const chapterExecAvatars: Record<string, Record<string, string>> = {
 	npss: {
 		'Sadia Noushin Promi': withBase('images/chapters/aps/exec/sadia-noushin-promi.jpg'),
 		'Nazifa Tasnim': withBase('images/chapters/aps/exec/nazifa-tasnim.jpg'),
+		'Mhamudul Hasan Sami': withBase('images/chapters/npss/exec/mhamudul-sami.jpg'),
 		'Noor Zahin': withBase('images/chapters/npss/exec/noor-zahin.jpg'),
+		'Ishfaq Elahi': withBase('images/chapters/npss/exec/ishfaq-elahi.jpg'),
 		'Pronojit Karmakar Mugdha': withBase('images/chapters/npss/exec/pronojit-mugdha.jpg'),
 	},
 };
