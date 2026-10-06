@@ -121,7 +121,12 @@ const associates = associatesForChapter(
             tinted={chapter.slug === 'embs' || chapter.slug === 'npss'}
             heroBackground={
                 chapter.slug === 'npss'
-                    ? 'linear-gradient(135deg, #fcf5e6 0%, #e8cfcc 55%, #c9a9af 100%)'
+                    ? 'linear-gradient(100deg, #ffffff 0%, #ffffff 42%, #a31d2d 76%, #111111 100%)'
+                    : undefined
+            }
+            heroBackgroundMobile={
+                chapter.slug === 'npss'
+                    ? 'linear-gradient(180deg, #ffffff 0%, #ffffff 68%, #a31d2d 100%)'
                     : undefined
             }
         />
