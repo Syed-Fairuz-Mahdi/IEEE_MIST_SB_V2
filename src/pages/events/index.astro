@@ -204,6 +204,7 @@ const initialEvents = all.map((event) => ({
 				{
 					secondary && (
 						<a class="secondary-card" data-secondary-card href={withBase(`/events/${secondary.id}`)}>
+							{secondary.data.image && <img class="secondary-media" src={withBase(secondary.data.image)} alt="" />}
 							<span class="tag">Chapter News</span>
 							<h3 data-secondary-title>{secondary.data.title}</h3>
 							{secondary.data.description && <p data-secondary-description>{secondary.data.description}</p>}
@@ -468,6 +469,7 @@ const initialEvents = all.map((event) => ({
 				secondary
 					? `
 						<a class="secondary-card" href="${escapeHtml(url(secondary.id))}">
+							${secondary.image ? `<img class="secondary-media" src="${escapeHtml(imageUrl(secondary.image))}" alt="" />` : ''}
 							<span class="tag">Chapter News</span>
 							<h3>${escapeHtml(secondary.title)}</h3>
 							${secondary.description ? `<p>${escapeHtml(secondary.description)}</p>` : ''}
@@ -874,6 +876,19 @@ const initialEvents = all.map((event) => ({
 
 	.secondary-card:hover {
 		border-color: var(--color-blue);
+	}
+
+	.secondary-card {
+		overflow: hidden;
+	}
+
+	.secondary-media {
+		width: calc(100% + 64px);
+		max-width: none;
+		margin: -32px -32px 8px;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		background: #e6e7e7;
 	}
 	.tag {
 		align-self: flex-start;
