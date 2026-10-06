@@ -81,10 +81,52 @@ const Content = event.entry
     ? (await render(event.entry)).Content
     : null;
 
-const paragraphs = (event.body ?? '')
-    .split(/\n{2,}/)
-    .map((text) => text.trim())
-    .filter(Boolean);
+type Block =
+    | { type: 'p' | 'h2' | 'h3'; text: string }
+    | { type: 'ul'; items: string[] };
+
+/** Every line break in the dashboard text counts: one line = one paragraph, "•" / "-" / "*" lines = a list. */
+function parseBody(body: string, title: string): Block[] {
+    const blocks: Block[] = [];
+    const lines = body.replace(/\r/g, '').split('\n').map((line) => line.trim());
+
+    // Dashboard text often starts by repeating the event title; the page already shows it.
+    const firstIndex = lines.findIndex(Boolean);
+    if (firstIndex >= 0 && lines[firstIndex].toLowerCase() === title.trim().toLowerCase()) {
+        lines.splice(firstIndex, 1);
+    }
+
+    for (const line of lines) {
+        if (!line) continue;
+        const bullet = line.match(/^(?:[•\-*])\s+(.*)$/);
+        if (bullet) {
+            const last = blocks[blocks.length - 1];
+            if (last?.type === 'ul') last.items.push(bullet[1]);
+            else blocks.push({ type: 'ul', items: [bullet[1]] });
+        } else if (line.startsWith('### ')) {
+            blocks.push({ type: 'h3', text: line.slice(4) });
+        } else if (line.startsWith('## ')) {
+            blocks.push({ type: 'h2', text: line.slice(3) });
+        } else {
+            blocks.push({ type: 'p', text: line });
+        }
+    }
+    return blocks;
+}
+
+/** Splits text so plain URLs can be rendered as links. */
+function linkParts(text: string): { text: string; href?: string }[] {
+    return text
+        .split(/(https?:\/\/[^\s<]+)/g)
+        .filter(Boolean)
+        .map((part) => {
+            if (!/^https?:\/\//.test(part)) return { text: part };
+            const href = part.replace(/[.,;:!?)]+$/, '');
+            return { text: href, href };
+        });
+}
+
+const blocks = parseBody(event.body ?? '', event.data.title);
 
 const chapter = chapters.find(
     (item) => item.shortName === event.data.chapter,
@@ -159,7 +201,45 @@ const related = (await getAllEvents())
                     </ul>
 
                     <div class="prose" data-event-body>
-                        {Content ? <Content /> : paragraphs.map((text) => <p class="plain">{text}</p>)}
+                        {
+                            Content ? (
+                                <Content />
+                            ) : blocks.length === 0 ? (
+                                <p>Event details will be announced soon.</p>
+                            ) : (
+                                blocks.map((block) =>
+                                    block.type === 'ul' ? (
+                                        <ul>
+                                            {block.items.map((item) => (
+                                                <li>
+                                                    {linkParts(item).map((part) =>
+                                                        part.href ? (
+                                                            <a href={part.href} target="_blank" rel="noopener noreferrer">{part.text}</a>
+                                                        ) : (
+                                                            part.text
+                                                        ),
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : block.type === 'h2' ? (
+                                        <h2>{block.text}</h2>
+                                    ) : block.type === 'h3' ? (
+                                        <h3>{block.text}</h3>
+                                    ) : (
+                                        <p>
+                                            {linkParts(block.text).map((part) =>
+                                                part.href ? (
+                                                    <a href={part.href} target="_blank" rel="noopener noreferrer">{part.text}</a>
+                                                ) : (
+                                                    part.text
+                                                ),
+                                            )}
+                                        </p>
+                                    )
+                                )
+                            )
+                        }
                     </div>
                 </article>
 
@@ -326,48 +406,79 @@ const related = (await getAllEvents())
                 if (element) element.textContent = value ?? '';
             }
 
-            function renderBody(body: string | null) {
+            function appendWithLinks(parent: HTMLElement, text: string) {
+                for (const part of text.split(/(https?:\/\/[^\s<]+)/g)) {
+                    if (!part) continue;
+                    if (/^https?:\/\//.test(part)) {
+                        const href = part.replace(/[.,;:!?)]+$/, '');
+                        const a = document.createElement('a');
+                        a.href = href;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        a.textContent = href;
+                        parent.appendChild(a);
+                        parent.appendChild(document.createTextNode(part.slice(href.length)));
+                    } else {
+                        parent.appendChild(document.createTextNode(part));
+                    }
+                }
+            }
+
+            function renderBody(body: string | null, title?: string | null) {
                 const container = page.querySelector<HTMLElement>('[data-event-body]');
                 if (!container) return;
 
+                const lines = (body ?? '').replace(/\r/g, '').split('\n').map((line) => line.trim());
+
+                // Skip a first line that only repeats the event title.
+                const firstIndex = lines.findIndex(Boolean);
+                if (firstIndex >= 0 && title && lines[firstIndex].toLowerCase() === title.trim().toLowerCase()) {
+                    lines.splice(firstIndex, 1);
+                }
+
                 container.replaceChildren();
 
-                if (!body) {
+                if (!lines.some(Boolean)) {
                     const p = document.createElement('p');
-                    p.className = 'plain';
                     p.textContent = 'Event details will be announced soon.';
                     container.appendChild(p);
                     return;
                 }
 
-                const blocks = body
-                    .split(/\n{2,}/)
-                    .map((block) => block.trim())
-                    .filter(Boolean);
+                let list: HTMLUListElement | null = null;
 
-                for (const block of blocks) {
-                    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+                for (const line of lines) {
+                    if (!line) {
+                        list = null;
+                        continue;
+                    }
 
-                    if (lines.every((line) => line.startsWith('- ') || line.startsWith('* '))) {
-                        const ul = document.createElement('ul');
-                        for (const line of lines) {
-                            const li = document.createElement('li');
-                            li.textContent = line.replace(/^[-*]\s+/, '');
-                            ul.appendChild(li);
+                    const bullet = line.match(/^(?:[•\-*])\s+(.*)$/);
+
+                    if (bullet) {
+                        if (!list) {
+                            list = document.createElement('ul');
+                            container.appendChild(list);
                         }
-                        container.appendChild(ul);
-                    } else if (block.startsWith('### ')) {
+                        const li = document.createElement('li');
+                        appendWithLinks(li, bullet[1]);
+                        list.appendChild(li);
+                        continue;
+                    }
+
+                    list = null;
+
+                    if (line.startsWith('### ')) {
                         const h3 = document.createElement('h3');
-                        h3.textContent = block.replace(/^###\s+/, '');
+                        h3.textContent = line.slice(4);
                         container.appendChild(h3);
-                    } else if (block.startsWith('## ')) {
+                    } else if (line.startsWith('## ')) {
                         const h2 = document.createElement('h2');
-                        h2.textContent = block.replace(/^##\s+/, '');
+                        h2.textContent = line.slice(3);
                         container.appendChild(h2);
                     } else {
                         const p = document.createElement('p');
-                        p.className = 'plain';
-                        p.textContent = block;
+                        appendWithLinks(p, line);
                         container.appendChild(p);
                     }
                 }
@@ -451,7 +562,7 @@ const related = (await getAllEvents())
                     }
                 }
 
-                renderBody(row.body);
+                renderBody(row.body, row.title);
                 updateRegistration(row);
             }
 
