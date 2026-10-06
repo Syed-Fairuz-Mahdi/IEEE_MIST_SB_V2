@@ -49,14 +49,20 @@ interface LiveEvent {
 
 const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS'] as const;
 
+function excerptFrom(body: string | null | undefined, max = 160): string {
+	const first = (body ?? '').split(/\n{2,}/).map((t) => t.trim()).find(Boolean) ?? '';
+	const text = first.replace(/\s+/g, ' ');
+	return text.length > max ? `${text.slice(0, max).replace(/\s+\S*$/, '')}…` : text;
+}
+
 function fromRow(row: EventRow): LiveEvent | null {
 	const date = new Date(row.event_date);
 	const chapter = CHAPTERS.find((code) => code === row.chapter);
+	const description = row.description?.trim() || excerptFrom(row.body);
 
 	if (
 		!row.slug ||
 		!row.title ||
-		!row.description ||
 		!chapter ||
 		Number.isNaN(date.getTime())
 	) {
@@ -71,7 +77,7 @@ function fromRow(row: EventRow): LiveEvent | null {
 			title: row.title,
 			date,
 			chapter,
-			description: row.description,
+			description,
 			image: row.image_url ?? undefined,
 			location: row.location ?? undefined,
 			time: row.event_time ?? undefined,
@@ -189,7 +195,7 @@ const initialEvents = all.map((event) => ({
 							<div class="large-body">
 								<span class="eyebrow" data-featured-eyebrow>{eyebrow(featured.data.date, featured.data.location)}</span>
 								<h2 data-featured-title>{featured.data.title}</h2>
-								<p data-featured-description>{featured.data.description}</p>
+								{featured.data.description && <p data-featured-description>{featured.data.description}</p>}
 								<span class="more">Read more →</span>
 							</div>
 						</a>
@@ -200,7 +206,7 @@ const initialEvents = all.map((event) => ({
 						<a class="secondary-card" data-secondary-card href={withBase(`/events/${secondary.id}`)}>
 							<span class="tag">Chapter News</span>
 							<h3 data-secondary-title>{secondary.data.title}</h3>
-							<p data-secondary-description>{secondary.data.description}</p>
+							{secondary.data.description && <p data-secondary-description>{secondary.data.description}</p>}
 							<span class="eyebrow dark" data-secondary-eyebrow>
 								{eyebrow(secondary.data.date, secondary.data.location)}
 							</span>
@@ -235,7 +241,7 @@ const initialEvents = all.map((event) => ({
 									<h3>
 										<a href={withBase(`/events/${event.id}`)}>{event.data.title}</a>
 									</h3>
-									<p>{event.data.description}</p>
+									{event.data.description && <p>{event.data.description}</p>}
 								</div>
 							</article>
 						))
@@ -394,11 +400,16 @@ const initialEvents = all.map((event) => ({
 		);
 	}
 
+	function excerptFrom(body: string | null | undefined, max = 160): string {
+		const first = (body ?? '').split(/\n{2,}/).map((t) => t.trim()).find(Boolean) ?? '';
+		const text = first.replace(/\s+/g, ' ');
+		return text.length > max ? `${text.slice(0, max).replace(/\s+\S*$/, '')}…` : text;
+	}
+
 	function normalize(row: SupabaseEventRow): LiveEvent | null {
 		if (
 			!row.slug ||
 			!row.title ||
-			!row.description ||
 			!row.chapter ||
 			!row.event_date ||
 			row.published === false
@@ -411,7 +422,7 @@ const initialEvents = all.map((event) => ({
 			title: row.title,
 			date: row.event_date,
 			chapter: row.chapter,
-			description: row.description,
+			description: row.description?.trim() || excerptFrom(row.body),
 			image: row.image_url,
 			location: row.location,
 			time: row.event_time,
@@ -459,7 +470,7 @@ const initialEvents = all.map((event) => ({
 						<a class="secondary-card" href="${escapeHtml(url(secondary.id))}">
 							<span class="tag">Chapter News</span>
 							<h3>${escapeHtml(secondary.title)}</h3>
-							<p>${escapeHtml(secondary.description)}</p>
+							${secondary.description ? `<p>${escapeHtml(secondary.description)}</p>` : ''}
 							<span class="eyebrow dark">${escapeHtml(eyebrowLive(secondary.date, secondary.location))}</span>
 						</a>
 					`
@@ -498,7 +509,7 @@ const initialEvents = all.map((event) => ({
 					<h3>
 						<a href="${escapeHtml(url(event.id))}">${escapeHtml(event.title)}</a>
 					</h3>
-					<p>${escapeHtml(event.description)}</p>
+					${event.description ? `<p>${escapeHtml(event.description)}</p>` : ''}
 				</div>
 			`;
 

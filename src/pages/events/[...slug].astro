@@ -8,7 +8,7 @@ import PageHero from '../../components/PageHero.astro';
 import EventCard from '../../components/EventCard.astro';
 import EventRegistration from '../../components/EventRegistration.astro';
 import Newsletter from '../../components/Newsletter.astro';
-import { getAllEvents, type SiteEvent } from '../../lib/events';
+import { getAllEvents, excerptFrom, type SiteEvent } from '../../lib/events';
 import { chapters } from '../../data/chapters';
 import { formatLongDate, isPast } from '../../utils/date';
 import { withBase } from '../../utils/paths';
@@ -61,7 +61,7 @@ const event = {
         title: row.title,
         date: new Date(`${row.event_date}T00:00:00`),
         chapter: row.chapter,
-        description: row.description,
+        description: row.description?.trim() || excerptFrom(row.body),
         body: row.body ?? '',
         image: row.image_url ?? undefined,
         location: row.location ?? undefined,
@@ -134,7 +134,7 @@ const related = (await getAllEvents())
                         {chapter ? `${chapter.code} · ${chapter.fullName}` : 'IEEE MIST Student Branch'}
                     </p>
                     <h1 data-event-title>{event.data.title}</h1>
-                    <p class="hero-description" data-event-description>{event.data.description}</p>
+                    {event.data.description && <p class="hero-description" data-event-description>{event.data.description}</p>}
                 </div>
             </div>
         </section>
@@ -413,7 +413,7 @@ const related = (await getAllEvents())
             function updateEventPage(row: SupabaseEvent) {
                 setText('[data-event-title]', row.title);
                 setText('[data-event-breadcrumb]', row.title);
-                setText('[data-event-description]', row.description);
+                if (row.description?.trim()) setText('[data-event-description]', row.description);
                 setText('[data-event-date]', formatEventDate(row.event_date));
                 setText('[data-event-time]', row.event_time);
                 setText('[data-event-location]', row.location);

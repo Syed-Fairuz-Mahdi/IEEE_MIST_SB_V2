@@ -41,12 +41,20 @@ interface EventRow {
 	tags: string[] | null;
 }
 
+/** Short summary used when the dashboard left the description empty: first paragraph of the body. */
+export function excerptFrom(body: string | null | undefined, max = 160): string {
+	const first = (body ?? '').split(/\n{2,}/).map((t) => t.trim()).find(Boolean) ?? '';
+	const text = first.replace(/\s+/g, ' ');
+	return text.length > max ? `${text.slice(0, max).replace(/\s+\S*$/, '')}…` : text;
+}
+
 const CHAPTERS = ['SB', 'EDS', 'APS', 'WIE', 'MTT-S', 'SPS', 'NPSS', 'EMBS'] as const;
 
 function fromRow(row: EventRow): SiteEvent | null {
 	const date = new Date(row.event_date);
 	const chapter = CHAPTERS.find((code) => code === row.chapter);
-	if (!row.slug || !row.title || !row.description || !chapter || Number.isNaN(date.getTime())) {
+	const description = row.description?.trim() || excerptFrom(row.body);
+	if (!row.slug || !row.title || !chapter || Number.isNaN(date.getTime())) {
 		return null;
 	}
 	return {
@@ -57,7 +65,7 @@ function fromRow(row: EventRow): SiteEvent | null {
 			title: row.title,
 			date,
 			chapter,
-			description: row.description,
+			description,
 			image: row.image_url ?? undefined,
 			location: row.location ?? undefined,
 			time: row.event_time ?? undefined,
