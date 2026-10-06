@@ -212,7 +212,7 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 	},
 	npss: {
 		heroTitle: 'Nuclear and Plasma Sciences Society',
-		heroSubtitle: 'Placeholder — a one-line summary of the NPSS Student Branch Chapter.',
+		heroSubtitle: "A MIST where no student has to choose between the atom and the circuit.",
 		about: [
 			'Placeholder — a paragraph about the IEEE NPSS Student Branch Chapter at MIST.',
 			'Placeholder — a second paragraph about the chapter and what it does.',
@@ -223,18 +223,21 @@ export const chapterCopy: Record<string, ChapterCopy> = {
 			{
 				icon: 'rocket',
 				title: 'Our Mission',
-				description: 'Placeholder — the chapter mission statement.',
+				description:
+					"To give MIST students a working home for nuclear and plasma science. We bring NSE and EEE students onto the same problems through monthly technical sessions, workshops, and competitions. We give student research a stage, at MIST and at IEEE conferences. We connect our members to the global NPSS community and the opportunities it opens. And we mentor every new batch, so each committee inherits a stronger chapter than the last.",
 			},
 			{
 				icon: 'eye',
 				title: 'Our Vision',
-				description: 'Placeholder — the chapter vision statement.',
+				description:
+					"A MIST where no student has to choose between the atom and the circuit. We see this campus becoming the place in Bangladesh where nuclear and electrical engineering are learned as one conversation, and where the engineers who will build, instrument, and power the country's nuclear future first meet as classmates.",
 			},
 		],
+		// Chair's message, supplied by the chapter.
 		story: [
-			'Placeholder — the chapter story, written by the chapter chair.',
-			'Placeholder — a second paragraph of the story.',
+			"When we look at a reactor, we see only half the picture. The other half is the generator, the control systems, and the electrical grid that transform nuclear energy into electricity powering someone's home. Every neutron detected electronically leaves a signal for a circuit to process. Yet at MIST, nuclear science and electrical engineering lived in separate departments, while the questions connecting them remained largely unexplored. We did not want another batch to graduate without meeting the people they will one day build with. So we wrote the petition, earned the backing of our faculty, and made our case to IEEE. This chapter exists because students asked for it. As its founding Chair, my promise is simple: it belongs to every MIST student curious enough to walk in.",
 		],
+		storyAttribution: 'Chair, IEEE NPSS MIST Student Branch Chapter',
 	},
 	embs: {
 		heroTitle: 'Engineering in Medicine and Biology Society',

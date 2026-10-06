@@ -19,6 +19,8 @@ interface Props {
 	variant?: 'dark' | 'light';
 	/** Light hero washed in the chapter's accent colour instead of the default white. */
 	tinted?: boolean;
+	/** Optional CSS background for a tinted hero, replacing the default accent wash. */
+	heroBackground?: string;
 }
 
 const {
@@ -36,6 +38,7 @@ const {
 	eventsLabel = 'Upcoming Events',
 	variant = 'dark',
 	tinted = false,
+	heroBackground,
 } = Astro.props;
 
 const patternExt = chapterHeroPattern[slug];
@@ -43,7 +46,7 @@ const pattern = patternExt ? withBase(`images/chapters/${slug}/bg-pattern.${patt
 const photo = chapterHeroPhoto[slug] ? withBase(chapterHeroPhoto[slug]) : null;
 ---
 
-<section class="chapter-hero" class:list={[variant, { tinted }]} style={`--accent:${accent}; --accent2:${accent2}`}>
+<section class="chapter-hero" class:list={[variant, { tinted, custom: !!heroBackground }]} style={`--accent:${accent}; --accent2:${accent2}${heroBackground ? `; --hero-bg:${heroBackground}` : ''}`}>
 	<div class="bg-layer">
 		{photo && <img src={photo} alt="" class="photo" />}
 		{pattern && <img src={pattern} alt="" class="pattern" />}
@@ -136,6 +139,14 @@ const photo = chapterHeroPhoto[slug] ? withBase(chapterHeroPhoto[slug]) : null;
 
 	.chapter-hero.tinted {
 		background: color-mix(in srgb, var(--accent) 22%, #fff);
+	}
+
+	.chapter-hero.tinted.custom {
+		background: var(--hero-bg);
+	}
+
+	.tinted.custom .overlay {
+		display: none;
 	}
 
 	.tinted .overlay {
